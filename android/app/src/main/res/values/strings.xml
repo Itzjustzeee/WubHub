@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WubHub</string>
+    <string name="title_activity_main">WubHub</string>
+    <string name="package_name">com.wubhub.app</string>
+    <string name="custom_url_scheme">com.wubhub.app</string>
+</resources>

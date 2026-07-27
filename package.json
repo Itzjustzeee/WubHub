@@ -1,0 +1,34 @@
+{
+  "name": "pmw-streams",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "cap:copy": "npm run build && npx cap copy",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "eventsub:server": "node server/eventsub-server.mjs",
+    "eventsub:subscribe:twitch": "node server/create-twitch-eventsub.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/local-notifications": "^8.2.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "hls.js": "^1.6.16",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "vite": "^7.3.0"
+  }
+}

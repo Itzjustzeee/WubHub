@@ -1,0 +1,11 @@
+{
+  "appId": "com.wubhub.app",
+  "appName": "WubHub",
+  "webDir": "dist",
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#72ff33",
+      "presentationOptions": ["badge", "sound", "banner", "list"]
+    }
+  }
+}

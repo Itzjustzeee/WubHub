@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Web build output
+dist/
+
+# Capacitor and native build output
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+ios/App/build/
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Logs and local environment
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+.env.*
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
