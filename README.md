@@ -81,31 +81,3 @@ The debug APK is generated under:
 ```text
 android/app/build/outputs/apk/debug/
 ```
-
-## Current Alpha APK
-
-The current Android Mobile/TV alpha build is:
-
-```text
-WubHub-debug-Alpha-Rev6.apk
-```
-
-Release tag:
-
-```text
-alpha-rev6
-```
-
-## Project Structure
-
-```text
-src/       React app source
-public/    Static assets
-server/    Optional notification/event helper scripts
-android/   Capacitor Android project
-ios/       Capacitor iOS project
-```
-
-## Notes
-
-WubHub is an unofficial community app. Platform embeds, chat login behavior, and autoplay behavior can depend on Kick, Twitch, YouTube, Android WebView, and iOS WebKit policies.
