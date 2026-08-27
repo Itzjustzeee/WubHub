@@ -505,7 +505,7 @@ function KickPlayer({ playbackUrl, status, allowIframeFallback = false, maxHeigh
   if (playbackUrl) {
     return (
       <HlsVideo
-        src={playbackUrl}
+        src={getPlayableKickPlaybackUrl(playbackUrl)}
         title="Kick HLS stream"
         autoPlay
         maxHeight={maxHeight}
@@ -813,6 +813,39 @@ function App() {
       cancelled = true;
     };
   }, [selectedStream, view]);
+
+  useEffect(() => {
+    if (view !== 'stream' || selectedStream !== 'kick' || !kickPlaybackUrl) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const expiryMs = getKickPlaybackExpiryMs(kickPlaybackUrl);
+    const refreshDelay = Math.max(
+      30000,
+      expiryMs ? expiryMs - Date.now() - 60000 : 8 * 60 * 1000,
+    );
+
+    const refreshTimer = window.setTimeout(async () => {
+      try {
+        const playbackUrl = await getKickPlaybackUrl();
+
+        if (!cancelled && playbackUrl) {
+          setKickPlaybackUrl(playbackUrl);
+          setKickPlaybackStatus('ready');
+        }
+      } catch {
+        if (!cancelled) {
+          setKickPlaybackStatus('unavailable');
+        }
+      }
+    }, refreshDelay);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(refreshTimer);
+    };
+  }, [kickPlaybackUrl, selectedStream, view]);
 
   useEffect(() => {
     const splashTimer = window.setTimeout(() => {
@@ -2045,6 +2078,36 @@ function extractKickStreamTitle(payload) {
 
   const title = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim());
   return title?.trim() ?? '';
+}
+
+function getPlayableKickPlaybackUrl(playbackUrl) {
+  if (Capacitor.isNativePlatform()) {
+    return playbackUrl;
+  }
+
+  return `/kick-hls?url=${encodeURIComponent(playbackUrl)}`;
+}
+
+function getKickPlaybackExpiryMs(playbackUrl) {
+  try {
+    const token = new URL(playbackUrl).searchParams.get('token');
+    const payload = token?.split('.')[1];
+
+    if (!payload) {
+      return 0;
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      '=',
+    );
+    const parsedPayload = JSON.parse(atob(paddedPayload));
+
+    return typeof parsedPayload.exp === 'number' ? parsedPayload.exp * 1000 : 0;
+  } catch {
+    return 0;
+  }
 }
 
 async function getTwitchLiveStatus() {

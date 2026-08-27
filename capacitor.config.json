@@ -3,6 +3,9 @@
   "appName": "WubHub",
   "webDir": "dist",
   "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
     "LocalNotifications": {
       "iconColor": "#72ff33",
       "presentationOptions": ["badge", "sound", "banner", "list"]
