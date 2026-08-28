@@ -19,6 +19,7 @@ import {
   Settings,
   Trash2,
   Tv,
+  Users,
   Video,
   X,
   Youtube,
@@ -82,10 +83,19 @@ const initialLiveStatus = mediaPlayers.reduce(
   (status, player) => ({ ...status, [player.id]: false }),
   {},
 );
+const initialLiveDetails = mediaPlayers.reduce(
+  (details, player) => ({ ...details, [player.id]: { title: '', category: '', viewers: null } }),
+  {},
+);
 
 const notificationStorageKey = 'wubhub-notifications';
 const notificationPrefsStorageKey = 'wubhub-notification-prefs';
 const defaultNotificationPrefs = { kick: false, twitch: false };
+const liveStatusTestMode = new URLSearchParams(window.location.search).has('testStreams');
+const testLiveDetails = {
+  kick: { isLive: true, title: 'Test Kick stream', category: 'Just Chatting', viewers: 12842 },
+  twitch: { isLive: true, title: 'Test Twitch stream', category: 'Magic: The Gathering', viewers: 9317 },
+};
 const hlsBufferThresholds = {
   critical: 8,
   low: 16,
@@ -106,6 +116,143 @@ function withTwitchReloadToken(src, token) {
 
   const separator = src.includes('?') ? '&' : '?';
   return `${src}${separator}wubhub_reload=${token}`;
+}
+
+class NativeKickHlsLoader {
+  constructor() {
+    this.context = null;
+    this.stats = createHlsLoadStats();
+    this.cancelled = false;
+  }
+
+  destroy() {
+    this.abort();
+  }
+
+  abort() {
+    this.cancelled = true;
+    this.stats.aborted = true;
+  }
+
+  getCacheAge() {
+    return 0;
+  }
+
+  getResponseHeader() {
+    return null;
+  }
+
+  async load(context, config, callbacks) {
+    this.context = context;
+    this.cancelled = false;
+    this.stats = createHlsLoadStats();
+    this.stats.loading.start = performance.now();
+
+    const timeoutMs = config?.loadPolicy?.maxLoadTimeMs ?? config?.timeout ?? 20000;
+    const responseType = context.responseType === 'arraybuffer' ? 'arraybuffer' : 'text';
+    const timeout = new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error('Kick HLS request timed out')), timeoutMs);
+    });
+
+    try {
+      const response = await Promise.race([
+        CapacitorHttp.get({
+          url: context.url,
+          headers: {
+            Origin: 'https://kick.com',
+            Referer: 'https://kick.com/paymoneywubby',
+            ...(context.headers ?? {}),
+          },
+          responseType,
+          connectTimeout: 12000,
+          readTimeout: 20000,
+        }),
+        timeout,
+      ]);
+
+      if (this.cancelled) {
+        callbacks.onAbort?.(this.stats, context, response);
+        return;
+      }
+
+      const data = responseType === 'arraybuffer'
+        ? base64ToArrayBuffer(response.data)
+        : String(response.data ?? '');
+      const byteLength = data instanceof ArrayBuffer ? data.byteLength : new Blob([data]).size;
+
+      this.stats.loaded = byteLength;
+      this.stats.total = byteLength;
+      this.stats.chunkCount = 1;
+      this.stats.loading.first = this.stats.loading.first || performance.now();
+      this.stats.loading.end = performance.now();
+
+      if (response.status < 200 || response.status >= 300) {
+        callbacks.onError(
+          { code: response.status, text: `Kick HLS request failed with ${response.status}` },
+          context,
+          response,
+          this.stats,
+        );
+        return;
+      }
+
+      callbacks.onSuccess(
+        {
+          url: context.url,
+          data,
+          code: response.status,
+          text: response.statusText ?? 'OK',
+        },
+        this.stats,
+        context,
+        response,
+      );
+    } catch (error) {
+      if (this.cancelled) {
+        callbacks.onAbort?.(this.stats, context, null);
+        return;
+      }
+
+      this.stats.loading.end = performance.now();
+
+      if (/timed out/i.test(error?.message ?? '')) {
+        callbacks.onTimeout(this.stats, context, error);
+        return;
+      }
+
+      callbacks.onError(
+        { code: 0, text: error?.message ?? 'Unable to load Kick HLS data' },
+        context,
+        error,
+        this.stats,
+      );
+    }
+  }
+}
+
+function createHlsLoadStats() {
+  return {
+    aborted: false,
+    loaded: 0,
+    retry: 0,
+    total: 0,
+    chunkCount: 0,
+    bwEstimate: 0,
+    loading: { start: 0, first: 0, end: 0 },
+    parsing: { start: 0, end: 0 },
+    buffering: { start: 0, first: 0, end: 0 },
+  };
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary = atob(String(base64 ?? ''));
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes.buffer;
 }
 
 const supportCards = [
@@ -341,6 +488,7 @@ function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackErr
     const hls = new Hls({
       enableWorker: true,
       lowLatencyMode: false,
+      ...(Capacitor.getPlatform() === 'ios' ? { loader: NativeKickHlsLoader } : {}),
       backBufferLength: 180,
       maxBufferLength: 90,
       maxMaxBufferLength: 180,
@@ -491,15 +639,19 @@ function KickEmbedFrame() {
   );
 }
 
-function KickPlayer({ playbackUrl, status, allowIframeFallback = false, maxHeight = 720 }) {
+function KickPlayer({ playbackUrl, status, isLive, liveStatusKnown = false, allowIframeFallback = false, maxHeight = 720 }) {
   const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     setUseFallback(false);
   }, [playbackUrl]);
 
-  if ((allowIframeFallback && useFallback) || (!playbackUrl && status !== 'loading')) {
+  if (allowIframeFallback && useFallback) {
     return <KickEmbedFrame />;
+  }
+
+  if (liveStatusKnown && !isLive) {
+    return <KickOfflinePanel status="offline" />;
   }
 
   if (playbackUrl) {
@@ -515,10 +667,16 @@ function KickPlayer({ playbackUrl, status, allowIframeFallback = false, maxHeigh
   }
 
   return (
-    <div className="stream-unavailable">
+    <KickOfflinePanel status={status === 'loading' ? 'loading' : 'offline'} />
+  );
+}
+
+function KickOfflinePanel({ status }) {
+  return (
+    <div className={`stream-unavailable ${status === 'loading' ? 'is-loading' : 'is-offline'}`}>
       <img src="/assets/Kick_logo.svg.webp" alt="" aria-hidden="true" />
-      <strong>{status === 'loading' ? 'Loading Kick stream' : 'Kick stream unavailable'}</strong>
-      <span>{status === 'loading' ? 'Checking the live HLS source...' : 'The stream may be offline or Kick is not exposing a playback source.'}</span>
+      <strong>{status === 'loading' ? 'Loading Kick stream' : 'Stream Offline'}</strong>
+      <span>{status === 'loading' ? 'Checking the live HLS source...' : 'PaymoneyWubby is not live on Kick right now.'}</span>
     </div>
   );
 }
@@ -651,6 +809,8 @@ function App() {
   const [kickPlaybackUrl, setKickPlaybackUrl] = useState('');
   const [kickPlaybackStatus, setKickPlaybackStatus] = useState('idle');
   const [liveStatus, setLiveStatus] = useState(initialLiveStatus);
+  const [liveStatusChecked, setLiveStatusChecked] = useState(false);
+  const [liveDetails, setLiveDetails] = useState(initialLiveDetails);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [vodStatus, setVodStatus] = useState('');
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
@@ -790,6 +950,12 @@ function App() {
     let cancelled = false;
 
     async function refreshKickPlayback() {
+      if (liveStatusChecked && !liveStatusRef.current.kick) {
+        setKickPlaybackUrl('');
+        setKickPlaybackStatus('unavailable');
+        return;
+      }
+
       setKickPlaybackStatus((current) => (current === 'ready' ? current : 'loading'));
 
       try {
@@ -812,7 +978,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedStream, view]);
+  }, [liveStatus.kick, liveStatusChecked, selectedStream, view]);
 
   useEffect(() => {
     if (view !== 'stream' || selectedStream !== 'kick' || !kickPlaybackUrl) {
@@ -907,6 +1073,26 @@ function App() {
     let cancelled = false;
 
     async function checkLiveStatus() {
+      if (liveStatusTestMode) {
+        const nextStatus = { kick: true, twitch: true };
+        const nextDetails = mediaPlayers.reduce((details, player) => ({
+          ...details,
+          [player.id]: {
+            title: testLiveDetails[player.id].title,
+            category: testLiveDetails[player.id].category,
+            viewers: testLiveDetails[player.id].viewers,
+          },
+        }), {});
+
+        if (!cancelled) {
+          setLiveStatus(nextStatus);
+          setLiveDetails(nextDetails);
+          setLiveStatusChecked(true);
+        }
+
+        return;
+      }
+
       const [kick, twitch] = await Promise.allSettled([getKickLiveStatus(), getTwitchLiveStatus()]);
       const liveDetails = {
         kick: kick.status === 'fulfilled' ? kick.value : null,
@@ -916,10 +1102,24 @@ function App() {
         kick: liveDetails.kick ? liveDetails.kick.isLive : liveStatusRef.current.kick,
         twitch: liveDetails.twitch ? liveDetails.twitch.isLive : liveStatusRef.current.twitch,
       };
+      const nextDetails = mediaPlayers.reduce((details, player) => {
+        const platformDetails = liveDetails[player.id];
+
+        return {
+          ...details,
+          [player.id]: {
+            title: platformDetails?.title ?? '',
+            category: platformDetails?.isLive ? platformDetails?.category ?? '' : '',
+            viewers: platformDetails?.isLive ? platformDetails?.viewers ?? null : null,
+          },
+        };
+      }, {});
 
       if (!cancelled) {
         handleLiveStatusNotifications(nextStatus, liveDetails);
         setLiveStatus(nextStatus);
+        setLiveDetails(nextDetails);
+        setLiveStatusChecked(true);
       }
     }
 
@@ -1497,14 +1697,14 @@ function App() {
     <main className={`app-shell ${isTelevision ? 'tv-shell' : ''}`}>
       {showSplash && (
         <div className="app-splash" aria-label="Loading WubHub">
-          <img src="/assets/0c6444fd-90fc-4771-af14-e66b532568d8.png" alt="WubHub" />
+          <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
           <span className="splash-loader" aria-hidden="true" />
         </div>
       )}
 
       <aside className="sidebar" aria-label="Primary">
         <button className="brand" type="button" onClick={goHome}>
-          <img src="/assets/0c6444fd-90fc-4771-af14-e66b532568d8.png" alt="WubHub" />
+          <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
         </button>
         <nav className="nav-list">
           {navGroups.map((group) => (
@@ -1519,7 +1719,7 @@ function App() {
       <section id="home" className="content">
         <header className="topbar">
           <button className="mobile-brand" type="button" onClick={goHome}>
-            <img src="/assets/0c6444fd-90fc-4771-af14-e66b532568d8.png" alt="WubHub" />
+            <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
           </button>
           <button
             className="icon-button notification-button"
@@ -1721,12 +1921,28 @@ function App() {
                     onClick={() => openStream(player.id)}
                   >
                     <span className="stream-meta">
-                      {liveStatus[player.id] && <span className="status-dot">Live</span>}
                       <img className={`stream-card-logo ${player.className}`} src={player.logo} alt={player.name} />
+                      {liveStatus[player.id] && liveDetails[player.id]?.category && (
+                        <span className="stream-category">{liveDetails[player.id].category}</span>
+                      )}
+                      {liveStatus[player.id] && liveDetails[player.id]?.viewers !== null && (
+                        <span className="stream-viewers stream-viewers-mobile">
+                          <Users size={14} aria-hidden="true" />
+                          {formatViewerCount(liveDetails[player.id].viewers)}
+                        </span>
+                      )}
                     </span>
-                    <span className={`stream-live-pill ${liveStatus[player.id] ? 'is-live' : 'is-offline'}`}>
-                      <span className="stream-status-dot" />
-                      {liveStatus[player.id] ? 'Live Now' : 'Not Live'}
+                    <span className="stream-card-status">
+                      <span className={`stream-live-pill ${liveStatus[player.id] ? 'is-live' : 'is-offline'}`}>
+                        <span className="stream-status-dot" />
+                        {liveStatus[player.id] ? 'Live Now' : 'Not Live'}
+                      </span>
+                      {liveStatus[player.id] && liveDetails[player.id]?.viewers !== null && (
+                        <span className="stream-viewers stream-viewers-desktop">
+                          <Users size={14} aria-hidden="true" />
+                          {formatViewerCount(liveDetails[player.id].viewers)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 ))}
@@ -1803,7 +2019,13 @@ function App() {
                   {streamFullscreen && streamFullscreenMode === 'overlay' ? (
                     <div className="stream-fullscreen-handoff" aria-hidden="true" />
                   ) : activePlayer.id === 'kick' ? (
-                    <KickPlayer playbackUrl={kickPlaybackUrl} status={kickPlaybackStatus} maxHeight={720} />
+                    <KickPlayer
+                      playbackUrl={kickPlaybackUrl}
+                      status={kickPlaybackStatus}
+                      isLive={liveStatus.kick}
+                      liveStatusKnown={liveStatusChecked}
+                      maxHeight={720}
+                    />
                   ) : (
                     <iframe
                       key={`${activePlayer.id}-${twitchPlayerKey}`}
@@ -1852,7 +2074,13 @@ function App() {
                 ref={streamFullscreenOverlayRef}
               >
                 {activePlayer.id === 'kick' ? (
-                  <KickPlayer playbackUrl={kickPlaybackUrl} status={kickPlaybackStatus} maxHeight={1080} />
+                  <KickPlayer
+                    playbackUrl={kickPlaybackUrl}
+                    status={kickPlaybackStatus}
+                    isLive={liveStatus.kick}
+                    liveStatusKnown={liveStatusChecked}
+                    maxHeight={1080}
+                  />
                 ) : (
                   <iframe
                     key={`${activePlayer.id}-fullscreen-${twitchPlayerKey}`}
@@ -1976,17 +2204,21 @@ async function getKickLiveStatus() {
   const data = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby');
   const isLive = Boolean(data?.livestream?.is_live ?? data?.livestream);
   let title = extractKickStreamTitle(data);
+  let category = extractKickStreamCategory(data);
+  let viewers = extractKickViewerCount(data);
 
-  if (isLive && !title) {
+  if (isLive && (!title || !category || viewers === null)) {
     try {
       const livestreamData = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby/livestream');
       title = extractKickStreamTitle(livestreamData);
+      category = category || extractKickStreamCategory(livestreamData);
+      viewers = viewers ?? extractKickViewerCount(livestreamData);
     } catch {
       // The channel response is enough for live status if the title endpoint is unavailable.
     }
   }
 
-  return { isLive, title };
+  return { isLive, title, category, viewers };
 }
 
 async function getKickPlaybackUrl() {
@@ -2080,8 +2312,52 @@ function extractKickStreamTitle(payload) {
   return title?.trim() ?? '';
 }
 
+function extractKickStreamCategory(payload) {
+  const categories = [
+    payload?.livestream?.category,
+    payload?.livestream?.categories?.[0],
+    payload?.category,
+    payload?.categories?.[0],
+    payload?.data?.livestream?.category,
+    payload?.data?.livestream?.categories?.[0],
+    payload?.data?.category,
+    payload?.data?.categories?.[0],
+  ];
+
+  const category = categories
+    .map((candidate) => {
+      if (typeof candidate === 'string') {
+        return candidate;
+      }
+
+      return candidate?.name ?? candidate?.title ?? candidate?.slug ?? '';
+    })
+    .find((candidate) => typeof candidate === 'string' && candidate.trim());
+
+  return category?.trim() ?? '';
+}
+
+function extractKickViewerCount(payload) {
+  const candidates = [
+    payload?.livestream?.viewer_count,
+    payload?.livestream?.viewers_count,
+    payload?.livestream?.viewers,
+    payload?.viewer_count,
+    payload?.viewers_count,
+    payload?.viewers,
+    payload?.data?.livestream?.viewer_count,
+    payload?.data?.livestream?.viewers_count,
+    payload?.data?.livestream?.viewers,
+    payload?.data?.viewer_count,
+    payload?.data?.viewers_count,
+    payload?.data?.viewers,
+  ];
+
+  return normalizeViewerCount(candidates.find((candidate) => candidate !== undefined && candidate !== null));
+}
+
 function getPlayableKickPlaybackUrl(playbackUrl) {
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.getPlatform() === 'ios') {
     return playbackUrl;
   }
 
@@ -2132,8 +2408,12 @@ async function getTwitchLiveStatus() {
   const isLive = !/^offline$/i.test(text) && !/offline|not live|does not exist/i.test(text);
 
   if (!isLive) {
-    return { isLive, title: '' };
+    return { isLive, title: '', category: '', viewers: null };
   }
+
+  let title = '';
+  let category = '';
+  let viewers = null;
 
   try {
     const titleResponse = await fetch('https://decapi.me/twitch/title/paymoneywubby', {
@@ -2141,14 +2421,37 @@ async function getTwitchLiveStatus() {
     });
 
     if (titleResponse.ok) {
-      const title = (await titleResponse.text()).trim();
-      return { isLive, title };
+      title = (await titleResponse.text()).trim();
     }
   } catch {
     // Live status still works if the title lookup fails.
   }
 
-  return { isLive, title: '' };
+  try {
+    const categoryResponse = await fetch('https://decapi.me/twitch/game/paymoneywubby', {
+      cache: 'no-store',
+    });
+
+    if (categoryResponse.ok) {
+      category = (await categoryResponse.text()).trim();
+    }
+  } catch {
+    // Category is optional UI detail.
+  }
+
+  try {
+    const viewerResponse = await fetch('https://decapi.me/twitch/viewercount/paymoneywubby', {
+      cache: 'no-store',
+    });
+
+    if (viewerResponse.ok) {
+      viewers = normalizeViewerCount(await viewerResponse.text());
+    }
+  } catch {
+    // Viewer count is optional UI detail.
+  }
+
+  return { isLive, title, category, viewers };
 }
 
 async function getTwitchGraphqlLiveStatus() {
@@ -2165,6 +2468,10 @@ async function getTwitchGraphqlLiveStatus() {
             title
             type
             createdAt
+            viewersCount
+            game {
+              name
+            }
           }
         }
       }
@@ -2212,10 +2519,66 @@ async function getTwitchGraphqlLiveStatus() {
 
   const stream = user.stream;
   if (!stream) {
-    return { isLive: false, title: '' };
+    return { isLive: false, title: '', category: '', viewers: null };
   }
 
-  return { isLive: true, title: typeof stream.title === 'string' ? stream.title.trim() : '' };
+  return {
+    isLive: true,
+    title: typeof stream.title === 'string' ? stream.title.trim() : '',
+    category: typeof stream.game?.name === 'string' ? stream.game.name.trim() : '',
+    viewers: normalizeViewerCount(stream.viewersCount),
+  };
+}
+
+function normalizeViewerCount(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value));
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || /offline|not live|does not exist/i.test(trimmed)) {
+    return null;
+  }
+
+  const compactMatch = trimmed.match(/([\d,.]+)\s*([kmb])?/i);
+  if (!compactMatch) {
+    return null;
+  }
+
+  const numeric = Number(compactMatch[1].replace(/,/g, ''));
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+
+  const multiplier = {
+    k: 1000,
+    m: 1000000,
+    b: 1000000000,
+  }[compactMatch[2]?.toLowerCase()] ?? 1;
+
+  return Math.max(0, Math.round(numeric * multiplier));
+}
+
+function formatViewerCount(value) {
+  const count = normalizeViewerCount(value);
+
+  if (count === null) {
+    return '';
+  }
+
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(count >= 10000000 ? 0 : 1)}M`;
+  }
+
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}K`;
+  }
+
+  return count.toLocaleString();
 }
 
 async function getLatestYoutubeVideo(channel, fallback) {

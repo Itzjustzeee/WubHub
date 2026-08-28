@@ -34,6 +34,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         configureEmbeddedAuthCookies();
         configureEmbeddedAuthPopups();
+        configureKickHlsProxy();
     }
 
     private void configureEmbeddedAuthCookies() {
@@ -143,6 +144,10 @@ public class MainActivity extends BridgeActivity {
                 return true;
             }
         });
+    }
+
+    private void configureKickHlsProxy() {
+        getBridge().setWebViewClient(new KickHlsWebViewClient(getBridge()));
     }
 
     private boolean isChatAuthUrl(String url) {
