@@ -1,5 +1,9 @@
 # WubHub
 
+<p align="center">
+<img width="200" height="200" alt="WubHub2-transparent" src="https://github.com/user-attachments/assets/0f970fcc-1842-469b-aba7-00158a4ea0a9" />
+</p>
+
 WubHub is a community stream hub for PaymoneyWubby viewers, built with React, Vite, and Capacitor for web, Android mobile, Android TV, and iOS targets.
 
 ## What It Does
