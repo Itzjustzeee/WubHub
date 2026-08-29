@@ -1572,12 +1572,25 @@ h1 {
   font-size: 0.82rem;
   font-weight: 900;
   cursor: pointer;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .stream-fullscreen-exit:hover,
 .stream-fullscreen-exit:focus-visible {
   border-color: rgba(120, 255, 47, 0.62);
   outline: none;
+}
+
+.stream-fullscreen-overlay.controls-hidden .stream-fullscreen-exit {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .vod-native-panel {
@@ -2510,6 +2523,20 @@ h1 {
       inset 0 1px 0 rgba(255, 255, 255, 0.05),
       0 14px 36px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(18px);
+  }
+
+  .app-shell.is-stream-fullscreen {
+    padding-bottom: 0;
+  }
+
+  .app-shell.is-stream-fullscreen .mobile-tabs {
+    display: none;
+  }
+
+  .app-shell:has(.cinema-frame:fullscreen) .mobile-tabs,
+  .app-shell:has(.cinema-frame:-webkit-full-screen) .mobile-tabs,
+  .app-shell:has(.stream-fullscreen-overlay) .mobile-tabs {
+    display: none;
   }
 
   .mobile-tabs a,

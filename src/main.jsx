@@ -804,6 +804,7 @@ function App() {
   const [selectedStream, setSelectedStream] = useState(mediaPlayers[0].id);
   const [streamFullscreen, setStreamFullscreen] = useState(false);
   const [streamFullscreenMode, setStreamFullscreenMode] = useState('none');
+  const [streamControlsVisible, setStreamControlsVisible] = useState(true);
   const [twitchPlayerKey, setTwitchPlayerKey] = useState(0);
   const [streamFrameSrc, setStreamFrameSrc] = useState(mediaPlayers[0].src);
   const [kickPlaybackUrl, setKickPlaybackUrl] = useState('');
@@ -824,6 +825,7 @@ function App() {
   const cinemaFrameRef = useRef(null);
   const streamFullscreenOverlayRef = useRef(null);
   const streamFullscreenHistoryRef = useRef(false);
+  const streamControlsTimerRef = useRef(null);
   const streamFullscreenRef = useRef(streamFullscreen);
   const streamFullscreenModeRef = useRef(streamFullscreenMode);
   const viewRef = useRef(view);
@@ -1144,7 +1146,17 @@ function App() {
 
   useEffect(() => {
     if (!streamFullscreen) {
+      setStreamControlsVisible(true);
+      window.clearTimeout(streamControlsTimerRef.current);
       return undefined;
+    }
+
+    function showStreamControls() {
+      setStreamControlsVisible(true);
+      window.clearTimeout(streamControlsTimerRef.current);
+      streamControlsTimerRef.current = window.setTimeout(() => {
+        setStreamControlsVisible(false);
+      }, 2200);
     }
 
     function handlePopState() {
@@ -1152,18 +1164,32 @@ function App() {
     }
 
     function handleKeyDown(event) {
+      showStreamControls();
+
       if (event.key === 'Escape') {
         event.preventDefault();
         exitStreamFullscreen();
       }
     }
 
+    showStreamControls();
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('mousemove', showStreamControls);
+    window.addEventListener('pointermove', showStreamControls);
+    window.addEventListener('touchstart', showStreamControls);
+    window.addEventListener('touchmove', showStreamControls);
+    window.addEventListener('wheel', showStreamControls);
 
     return () => {
+      window.clearTimeout(streamControlsTimerRef.current);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mousemove', showStreamControls);
+      window.removeEventListener('pointermove', showStreamControls);
+      window.removeEventListener('touchstart', showStreamControls);
+      window.removeEventListener('touchmove', showStreamControls);
+      window.removeEventListener('wheel', showStreamControls);
     };
   }, [streamFullscreen]);
 
@@ -1172,6 +1198,11 @@ function App() {
       const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
 
       if (fullscreenElement) {
+        if (!streamFullscreenRef.current) {
+          setStreamFullscreen(true);
+          setStreamFullscreenMode('native');
+        }
+
         await lockLandscape();
 
         try {
@@ -1694,7 +1725,7 @@ function App() {
   }
 
   return (
-    <main className={`app-shell ${isTelevision ? 'tv-shell' : ''}`}>
+    <main className={`app-shell ${isTelevision ? 'tv-shell' : ''} ${streamFullscreen ? 'is-stream-fullscreen' : ''}`}>
       {showSplash && (
         <div className="app-splash" aria-label="Loading WubHub">
           <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
@@ -2068,10 +2099,12 @@ function App() {
 
             {streamFullscreen && streamFullscreenMode === 'overlay' && (
               <div
-                className="stream-fullscreen-overlay"
+                className={`stream-fullscreen-overlay ${streamControlsVisible ? 'controls-visible' : 'controls-hidden'}`}
                 role="dialog"
                 aria-label={`${activePlayer.name} fullscreen stream`}
                 ref={streamFullscreenOverlayRef}
+                onClick={() => setStreamControlsVisible(true)}
+                onPointerDown={() => setStreamControlsVisible(true)}
               >
                 {activePlayer.id === 'kick' ? (
                   <KickPlayer
