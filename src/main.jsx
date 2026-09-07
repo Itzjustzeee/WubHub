@@ -23,7 +23,6 @@ import {
   Users,
   Video,
   X,
-  Youtube,
 } from 'lucide-react';
 import './styles.css';
 
@@ -88,6 +87,25 @@ const initialLiveDetails = mediaPlayers.reduce(
   (details, player) => ({ ...details, [player.id]: { title: '', category: '', viewers: null } }),
   {},
 );
+
+function YoutubeIcon({ size = 24, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      {...props}
+    >
+      <path d="M2.5 8.5c0-2.2 1.8-4 4-4h11c2.2 0 4 1.8 4 4v7c0 2.2-1.8 4-4 4h-11c-2.2 0-4-1.8-4-4z" />
+      <path d="m10 8.5 6 3.5-6 3.5z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 const notificationStorageKey = 'wubhub-notifications';
 const notificationPrefsStorageKey = 'wubhub-notification-prefs';
@@ -776,9 +794,9 @@ const navGroups = [
   {
     label: 'YouTube',
     items: [
-      { type: 'link', id: 'highlights', label: 'Highlights', icon: Youtube, href: links.highlights },
-      { type: 'link', id: 'clips', label: 'Wubby Clips', icon: Youtube, href: links.clips },
-      { type: 'link', id: 'magicMonday', label: 'Magic Monday', icon: Youtube, href: links.magicMonday },
+      { type: 'link', id: 'highlights', label: 'Highlights', icon: YoutubeIcon, href: links.highlights },
+      { type: 'link', id: 'clips', label: 'Wubby Clips', icon: YoutubeIcon, href: links.clips },
+      { type: 'link', id: 'magicMonday', label: 'Magic Monday', icon: YoutubeIcon, href: links.magicMonday },
     ],
   },
   {
@@ -2024,27 +2042,37 @@ function App() {
         )}
 
         {mobileMenuOpen && (
-          <nav className={`mobile-menu ${mobileMenuClosing ? 'is-closing' : 'is-opening'}`} aria-label="Mobile menu">
-            {navGroups.filter((group) => group.label === 'Watch').map((group) => (
-              <div className="nav-group" key={group.label}>
-                <p>{group.label}</p>
-                {group.items.map(renderNavItem)}
+          <div
+            className={`mobile-menu-backdrop ${mobileMenuClosing ? 'is-closing' : 'is-opening'}`}
+            role="presentation"
+            onClick={closeMobileMenu}
+          >
+            <nav
+              className="mobile-menu"
+              aria-label="Mobile menu"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {navGroups.filter((group) => group.label === 'Watch').map((group) => (
+                <div className="nav-group" key={group.label}>
+                  <p>{group.label}</p>
+                  {group.items.map(renderNavItem)}
+                </div>
+              ))}
+              <div className="mobile-more-actions" aria-label="More menu actions">
+                {mobileMoreActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <button type="button" key={action.id}>
+                      <span>
+                        <Icon size={28} aria-hidden="true" />
+                      </span>
+                      <strong>{action.label}</strong>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
-            <div className="mobile-more-actions" aria-label="More menu actions">
-              {mobileMoreActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button type="button" key={action.id}>
-                    <span>
-                      <Icon size={28} aria-hidden="true" />
-                    </span>
-                    <strong>{action.label}</strong>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
+            </nav>
+          </div>
         )}
 
         {view === 'home' ? (
@@ -2075,7 +2103,7 @@ function App() {
                   >
                     <div className="hero-slide-copy">
                       <span className="hero-slide-eyebrow">
-                        {slide.type === 'youtube' && <Youtube size={18} aria-hidden="true" />}
+                        {slide.type === 'youtube' && <YoutubeIcon size={18} aria-hidden="true" />}
                         {slide.type === 'store' && <ShoppingBag size={18} aria-hidden="true" />}
                         {slide.eyebrow}
                       </span>
