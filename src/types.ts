@@ -17,6 +17,8 @@ export type LinkKey =
   | 'subreddit'
   | 'discord'
   | 'x'
+  | 'copSlop'
+  | 'regardedArt'
   | 'vodArchive'
   | 'tts'
   | 'highlights'
@@ -84,7 +86,15 @@ export type KickPlayerProps = {
   maxHeight?: number;
 };
 
-export type SupportCardClassName = 'patreon' | 'shop' | 'vods' | 'discord' | 'reddit' | 'x-social';
+export type SupportCardClassName =
+  | 'patreon'
+  | 'shop'
+  | 'vods'
+  | 'discord'
+  | 'reddit'
+  | 'x-social'
+  | 'cop-slop'
+  | 'regarded-art';
 
 export type SupportCard = {
   name: string;

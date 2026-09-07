@@ -91,6 +91,8 @@ const links: Record<LinkKey, string> = {
   subreddit: 'https://www.reddit.com/r/PaymoneyWubby/',
   discord: 'https://discord.com/invite/wubby',
   x: 'https://x.com/PaymoneyWubby?lang=en',
+  copSlop: 'https://cop-slop.wubby.live/',
+  regardedArt: 'https://regarded.art/',
   vodArchive: 'https://parasoci.al/vods',
   tts: 'https://tangia.co/paymoneywubby',
   highlights: 'https://www.youtube.com/@PaymoneyWubbyHighlights',
@@ -393,6 +395,24 @@ const supportCards: SupportCard[] = [
     icon: X,
     image: '/assets/twitter-x-logo-png_seeklogo-492397.png',
     className: 'x-social',
+  },
+  {
+    name: 'Cop Slop',
+    url: links.copSlop,
+    label: 'cop-slop.wubby.live',
+    detail: 'Community bodycam board',
+    icon: Video,
+    image: '/assets/cop-slop-1b.svg',
+    className: 'cop-slop',
+  },
+  {
+    name: 'Regarded Art',
+    url: links.regardedArt,
+    label: 'Regarded.art',
+    detail: 'Community artist showcase',
+    icon: Info,
+    image: '/assets/regarded-art-icon.svg',
+    className: 'regarded-art',
   },
 ];
 

@@ -1979,6 +1979,35 @@ h1 {
     drop-shadow(0 -1px 0 #ffffff);
 }
 
+.support-card.cop-slop::before {
+  background:
+    radial-gradient(circle at 80% 35%, rgba(211, 216, 224, 0.14), transparent 8rem),
+    linear-gradient(135deg, #253247, #05090f);
+}
+
+.support-card.cop-slop {
+  border-color: rgba(106, 134, 168, 0.42);
+}
+
+.support-card.cop-slop .card-arrow {
+  color: #9aa3ad;
+}
+
+.support-card.regarded-art::before {
+  background:
+    radial-gradient(circle at 82% 24%, rgba(70, 229, 217, 0.16), transparent 8rem),
+    radial-gradient(circle at 25% 100%, rgba(255, 46, 136, 0.18), transparent 9rem),
+    linear-gradient(135deg, #2a1338, #1f0e29 58%, #3b1a4e);
+}
+
+.support-card.regarded-art {
+  border-color: rgba(255, 77, 154, 0.34);
+}
+
+.support-card.regarded-art .card-arrow {
+  color: #ff6fb0;
+}
+
 .support-card.vods::before {
   background:
     radial-gradient(circle at 78% 40%, rgba(114, 255, 51, 0.16), transparent 9rem),
@@ -3004,6 +3033,28 @@ h1 {
       drop-shadow(-1px 0 0 #ffffff)
       drop-shadow(0 1px 0 #ffffff)
       drop-shadow(0 -1px 0 #ffffff);
+  }
+
+  .links-drawer-card.cop-slop .links-drawer-icon {
+    border-color: rgba(106, 134, 168, 0.44);
+    background: linear-gradient(135deg, #253247, #05090f);
+  }
+
+  .links-drawer-card.cop-slop .links-drawer-icon img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .links-drawer-card.regarded-art .links-drawer-icon {
+    border-color: rgba(255, 77, 154, 0.42);
+    background:
+      radial-gradient(circle at 78% 22%, rgba(70, 229, 217, 0.2), transparent 62%),
+      linear-gradient(135deg, #2a1338, #1f0e29 58%, #3b1a4e);
+  }
+
+  .links-drawer-card.regarded-art .links-drawer-icon img {
+    width: 40px;
+    height: 40px;
   }
 
   .links-drawer-card strong {

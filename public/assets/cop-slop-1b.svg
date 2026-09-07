@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <path d="M50 6 L88 19 V54 C88 76 70 88 50 96 C30 88 12 76 12 54 V19 Z" fill="#d3d8e0"></path>
+  <text x="39" y="63" text-anchor="middle" font-family="&#39;Libre Franklin&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif" font-weight="900" font-size="27" fill="#111827">C</text>
+  <text x="61" y="63" text-anchor="middle" font-family="&#39;Libre Franklin&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif" font-weight="900" font-size="27" fill="#111827">S</text>
+</svg>
