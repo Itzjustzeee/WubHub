@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core';
@@ -31,6 +32,28 @@ type ViewName = 'home' | 'stream' | 'vods';
 type StreamFullscreenMode = 'none' | 'native' | 'overlay';
 type NotificationTab = 'notifications' | 'settings';
 type LiveStatusMap = Record<StreamId, boolean>;
+type LinkKey =
+  | 'kick'
+  | 'kickEmbed'
+  | 'kickChatSignIn'
+  | 'twitch'
+  | 'twitchChatSignIn'
+  | 'patreon'
+  | 'shop'
+  | 'subreddit'
+  | 'discord'
+  | 'x'
+  | 'vodArchive'
+  | 'tts'
+  | 'highlights'
+  | 'clips'
+  | 'magicMonday';
+
+type IconComponent = ComponentType<{
+  size?: number;
+  className?: string;
+  'aria-hidden'?: boolean | 'true' | 'false';
+}>;
 
 type LiveDetails = {
   title: string;
@@ -51,6 +74,87 @@ type WubHubNotification = {
   title: string;
   message: string;
   createdAt: number;
+};
+
+type HlsLevel = {
+  height?: number;
+  bitrate?: number;
+};
+
+type SupportCardClassName = 'patreon' | 'shop' | 'vods' | 'discord' | 'reddit' | 'x-social';
+type SupportCard = {
+  name: string;
+  url: string;
+  view?: 'vods';
+  label: string;
+  detail: string;
+  icon: IconComponent;
+  image?: string;
+  className: SupportCardClassName;
+};
+
+type YoutubeCardClassName = 'highlights' | 'clips' | 'magic';
+type YoutubeChannel = {
+  name: string;
+  channelId: string;
+  url: string;
+  detail: string;
+  image: string;
+  banner: string;
+  className: YoutubeCardClassName;
+};
+
+type LatestYoutubeVideo = {
+  channelName: string;
+  title: string;
+  url: string;
+  image: string;
+  channelImage: string;
+  className: YoutubeCardClassName;
+};
+
+type HeroSlide = {
+  type: 'store' | 'youtube';
+  eyebrow: string;
+  title: string;
+  detail: string;
+  url: string;
+  image: string;
+  className: 'store' | YoutubeCardClassName;
+  channelImage?: string;
+};
+
+type MobileMoreAction = {
+  id: 'settings' | 'about' | 'contact';
+  label: string;
+  icon: IconComponent;
+};
+
+type NavItem =
+  | { type: 'button'; id: 'home'; label: string; icon: IconComponent }
+  | { type: 'stream'; id: StreamId; label: string; icon: IconComponent }
+  | { type: 'vods'; id: 'vodArchive'; label: string; icon: IconComponent }
+  | { type: 'link'; id: string; label: string; icon: IconComponent; href: string };
+
+type NavGroup = {
+  label: 'Watch' | 'YouTube' | 'Community' | 'Merch';
+  items: NavItem[];
+};
+
+type JsonRecord = Record<string, unknown>;
+
+type TwitchGraphqlResponse = {
+  data?: {
+    user?: {
+      stream?: {
+        title?: unknown;
+        viewersCount?: unknown;
+        game?: {
+          name?: unknown;
+        } | null;
+      } | null;
+    } | null;
+  };
 };
 
 type NativeVodPlugin = {
@@ -96,7 +200,7 @@ const NativeExternal = registerPlugin<NativeUrlPlugin>('NativeExternal');
 const NativeChatAuth = registerPlugin<NativeUrlPlugin>('NativeChatAuth');
 const NativePlatform = registerPlugin<NativePlatformPlugin>('NativePlatform');
 
-const links = {
+const links: Record<LinkKey, string> = {
   kick: 'https://kick.com/paymoneywubby?theater=true',
   kickEmbed: 'https://player.kick.com/paymoneywubby?autoplay=false&muted=false&allowfullscreen=true',
   kickChatSignIn: 'https://kick.com/paymoneywubby/chat',
@@ -116,7 +220,7 @@ const links = {
 
 const twitchParent = window.location.hostname || 'localhost';
 const twitchGraphqlClientId = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
-const streamChats = {
+const streamChats: Record<StreamId, string> = {
   kick: 'https://chat.kick.cx/embed/paymoneywubby',
   twitch: `https://www.twitch.tv/embed/paymoneywubby/chat?parent=${encodeURIComponent(twitchParent)}&darkpopout`,
 };
@@ -344,7 +448,7 @@ function createHlsLoadStats() {
   };
 }
 
-function base64ToArrayBuffer(base64) {
+function base64ToArrayBuffer(base64: string) {
   const binary = atob(String(base64 ?? ''));
   const bytes = new Uint8Array(binary.length);
 
@@ -355,7 +459,7 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
-const supportCards = [
+const supportCards: SupportCard[] = [
   {
     name: 'The Green Room',
     url: links.patreon,
@@ -413,7 +517,7 @@ const supportCards = [
   },
 ];
 
-const youtubeCards = [
+const youtubeCards: YoutubeChannel[] = [
   {
     name: 'Wubby Highlights',
     channelId: 'UCmcCGOWBcvTcw9HIF3JASIg',
@@ -443,7 +547,7 @@ const youtubeCards = [
   },
 ];
 
-const fallbackLatestVideos = [
+const fallbackLatestVideos: LatestYoutubeVideo[] = [
   {
     channelName: youtubeCards[0].name,
     title: 'Dawson Oaks Trailer Park Made Me A Criminal',
@@ -470,7 +574,7 @@ const fallbackLatestVideos = [
   },
 ];
 
-function createHeroSlides(latestVideos) {
+function createHeroSlides(latestVideos: LatestYoutubeVideo[]): HeroSlide[] {
   return [
     {
       type: 'store',
@@ -482,7 +586,7 @@ function createHeroSlides(latestVideos) {
       className: 'store',
     },
     ...latestVideos.map((video) => ({
-      type: 'youtube',
+      type: 'youtube' as const,
       eyebrow: video.channelName,
       title: video.title,
       detail: 'Latest upload',
@@ -494,8 +598,16 @@ function createHeroSlides(latestVideos) {
   ];
 }
 
-function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackError }) {
-  const videoRef = useRef(null);
+type HlsVideoProps = {
+  src: string;
+  title: string;
+  autoPlay?: boolean;
+  maxHeight?: number;
+  onPlaybackError?: () => void;
+};
+
+function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackError }: HlsVideoProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -739,7 +851,25 @@ function KickEmbedFrame() {
   );
 }
 
-function KickPlayer({ playbackUrl, status, isLive, liveStatusKnown = false, allowIframeFallback = false, maxHeight = 720 }) {
+type KickPlaybackStatus = 'idle' | 'loading' | 'ready' | 'unavailable';
+
+type KickPlayerProps = {
+  playbackUrl: string;
+  status: KickPlaybackStatus;
+  isLive: boolean;
+  liveStatusKnown?: boolean;
+  allowIframeFallback?: boolean;
+  maxHeight?: number;
+};
+
+function KickPlayer({
+  playbackUrl,
+  status,
+  isLive,
+  liveStatusKnown = false,
+  allowIframeFallback = false,
+  maxHeight = 720,
+}: KickPlayerProps) {
   const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
@@ -771,7 +901,7 @@ function KickPlayer({ playbackUrl, status, isLive, liveStatusKnown = false, allo
   );
 }
 
-function KickOfflinePanel({ status }) {
+function KickOfflinePanel({ status }: { status: 'loading' | 'offline' }) {
   return (
     <div className={`stream-unavailable ${status === 'loading' ? 'is-loading' : 'is-offline'}`}>
       <img src="/assets/Kick_logo.svg.webp" alt="" aria-hidden="true" />
@@ -781,7 +911,7 @@ function KickOfflinePanel({ status }) {
   );
 }
 
-function getStableHlsLevelIndex(levels, maxHeight) {
+function getStableHlsLevelIndex(levels: HlsLevel[], maxHeight: number) {
   if (!Array.isArray(levels) || levels.length === 0) {
     return -1;
   }
@@ -805,7 +935,12 @@ function getStableHlsLevelIndex(levels, maxHeight) {
   return selectedLevel.index;
 }
 
-function getAdjacentHlsLevelIndex(levels, currentLevelIndex, direction, maxLevelIndex = null) {
+function getAdjacentHlsLevelIndex(
+  levels: HlsLevel[],
+  currentLevelIndex: number,
+  direction: -1 | 1,
+  maxLevelIndex: number | null = null,
+) {
   const sortedIndexes = getSortedHlsLevelIndexes(levels);
   const currentPosition = sortedIndexes.indexOf(currentLevelIndex);
 
@@ -823,7 +958,7 @@ function getAdjacentHlsLevelIndex(levels, currentLevelIndex, direction, maxLevel
   return sortedIndexes[nextPosition] ?? -1;
 }
 
-function getSortedHlsLevelIndexes(levels) {
+function getSortedHlsLevelIndexes(levels: HlsLevel[]) {
   if (!Array.isArray(levels)) {
     return [];
   }
@@ -843,7 +978,7 @@ function getSortedHlsLevelIndexes(levels) {
     .map((level) => level.index);
 }
 
-function getForwardBufferSeconds(video) {
+function getForwardBufferSeconds(video: HTMLVideoElement | null) {
   if (!video || video.buffered.length === 0) {
     return 0;
   }
@@ -860,7 +995,7 @@ function getForwardBufferSeconds(video) {
   return 0;
 }
 
-const navGroups = [
+const navGroups: NavGroup[] = [
   {
     label: 'Watch',
     items: [
@@ -895,7 +1030,7 @@ const navGroups = [
   },
 ];
 
-const mobileMoreActions = [
+const mobileMoreActions: MobileMoreAction[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'about', label: 'About', icon: Info },
   { id: 'contact', label: 'Contact me', icon: MessageCircle },
@@ -903,54 +1038,56 @@ const mobileMoreActions = [
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [view, setView] = useState('home');
+  const [view, setView] = useState<ViewName>('home');
   const [isTelevision, setIsTelevision] = useState(false);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [linksDrawerOpen, setLinksDrawerOpen] = useState(false);
   const [linksDrawerClosing, setLinksDrawerClosing] = useState(false);
   const [viewTransition, setViewTransition] = useState('');
-  const [latestYoutubeVideos, setLatestYoutubeVideos] = useState(fallbackLatestVideos);
-  const [selectedStream, setSelectedStream] = useState(mediaPlayers[0].id);
+  const [latestYoutubeVideos, setLatestYoutubeVideos] = useState<LatestYoutubeVideo[]>(fallbackLatestVideos);
+  const [selectedStream, setSelectedStream] = useState<StreamId>(mediaPlayers[0].id);
   const [streamFullscreen, setStreamFullscreen] = useState(false);
-  const [streamFullscreenMode, setStreamFullscreenMode] = useState('none');
+  const [streamFullscreenMode, setStreamFullscreenMode] = useState<StreamFullscreenMode>('none');
   const [streamControlsVisible, setStreamControlsVisible] = useState(true);
   const [twitchPlayerKey, setTwitchPlayerKey] = useState(0);
   const [streamFrameSrc, setStreamFrameSrc] = useState(mediaPlayers[0].src);
   const [kickPlaybackUrl, setKickPlaybackUrl] = useState('');
-  const [kickPlaybackStatus, setKickPlaybackStatus] = useState('idle');
-  const [liveStatus, setLiveStatus] = useState(initialLiveStatus);
+  const [kickPlaybackStatus, setKickPlaybackStatus] = useState<KickPlaybackStatus>('idle');
+  const [liveStatus, setLiveStatus] = useState<LiveStatusMap>(initialLiveStatus);
   const [liveStatusChecked, setLiveStatusChecked] = useState(false);
-  const [liveDetails, setLiveDetails] = useState(initialLiveDetails);
+  const [liveDetails, setLiveDetails] = useState<LiveDetailsMap>(initialLiveDetails);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
   const [vodStatus, setVodStatus] = useState('');
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationDrawerClosing, setNotificationDrawerClosing] = useState(false);
-  const [notificationTab, setNotificationTab] = useState('notifications');
-  const [notificationPrefs, setNotificationPrefs] = useState(() => ({
+  const [notificationTab, setNotificationTab] = useState<NotificationTab>('notifications');
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(() => ({
     ...defaultNotificationPrefs,
-    ...readStoredJson(notificationPrefsStorageKey, {}),
+    ...readStoredJson<Partial<NotificationPrefs>>(notificationPrefsStorageKey, {}),
   }));
-  const [notifications, setNotifications] = useState(() => readStoredJson(notificationStorageKey, []));
+  const [notifications, setNotifications] = useState<WubHubNotification[]>(
+    () => readStoredJson<WubHubNotification[]>(notificationStorageKey, []),
+  );
   const isNativeApp = Capacitor.isNativePlatform();
-  const cinemaFrameRef = useRef(null);
-  const streamFullscreenOverlayRef = useRef(null);
+  const cinemaFrameRef = useRef<HTMLDivElement | null>(null);
+  const streamFullscreenOverlayRef = useRef<HTMLDivElement | null>(null);
   const streamFullscreenHistoryRef = useRef(false);
-  const streamControlsTimerRef = useRef(null);
-  const streamFullscreenRef = useRef(streamFullscreen);
-  const streamFullscreenModeRef = useRef(streamFullscreenMode);
-  const viewRef = useRef(view);
+  const streamControlsTimerRef = useRef<number | null>(null);
+  const streamFullscreenRef = useRef<boolean>(streamFullscreen);
+  const streamFullscreenModeRef = useRef<StreamFullscreenMode>(streamFullscreenMode);
+  const viewRef = useRef<ViewName>(view);
   const mobileMenuOpenRef = useRef(mobileMenuOpen);
   const linksDrawerOpenRef = useRef(linksDrawerOpen);
   const notificationDrawerOpenRef = useRef(notificationDrawerOpen);
-  const viewTransitionTimerRef = useRef(null);
-  const mobileMenuTimerRef = useRef(null);
-  const linksDrawerTimerRef = useRef(null);
-  const notificationDrawerTimerRef = useRef(null);
-  const heroSwipeStartRef = useRef(null);
+  const viewTransitionTimerRef = useRef<number | null>(null);
+  const mobileMenuTimerRef = useRef<number | null>(null);
+  const linksDrawerTimerRef = useRef<number | null>(null);
+  const notificationDrawerTimerRef = useRef<number | null>(null);
+  const heroSwipeStartRef = useRef<number | null>(null);
   const heroSwipeMovedRef = useRef(false);
   const liveStatusRef = useRef(liveStatus);
-  const previousLiveStatusRef = useRef(null);
+  const previousLiveStatusRef = useRef<LiveStatusMap | null>(null);
   const notificationPrefsRef = useRef(notificationPrefs);
   const activePlayer = mediaPlayers.find((player) => player.id === selectedStream) ?? mediaPlayers[0];
   const heroSlides = createHeroSlides(latestYoutubeVideos);
@@ -1439,7 +1576,7 @@ function App() {
     };
   }, [isNativeApp]);
 
-  async function openStream(streamId) {
+  async function openStream(streamId: StreamId) {
     const shouldTransition = viewRef.current !== 'stream' || selectedStream !== streamId;
     setSelectedStream(streamId);
     setStreamFrameSrc(mediaPlayers.find((player) => player.id === streamId)?.src ?? mediaPlayers[0].src);
@@ -1462,7 +1599,7 @@ function App() {
     closeLinksDrawer();
   }
 
-  function runViewTransition(className) {
+  function runViewTransition(className: string) {
     if (viewTransitionTimerRef.current) {
       window.clearTimeout(viewTransitionTimerRef.current);
     }
@@ -1576,7 +1713,7 @@ function App() {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  async function openExternalLink(url) {
+  async function openExternalLink(url: string) {
     if (isNativeApp) {
       try {
         await NativeExternal.open({ url });
@@ -1589,15 +1726,15 @@ function App() {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  function handleExternalLinkClick(url) {
-    return (event) => {
+  function handleExternalLinkClick(url: string) {
+    return (event: React.MouseEvent<HTMLElement>) => {
       event.preventDefault();
       closeLinksDrawer();
       openExternalLink(url);
     };
   }
 
-  function handleNativeVodTarget(target) {
+  function handleNativeVodTarget(target?: ViewName | StreamId | 'more') {
     if (target === 'home') {
       goHome();
       return;
@@ -1732,7 +1869,7 @@ function App() {
     }
   }
 
-  async function requestElementFullscreen(element) {
+  async function requestElementFullscreen(element: HTMLElement | null) {
     if (!element) {
       throw new Error('No stream player available');
     }
@@ -1760,11 +1897,11 @@ function App() {
     }
   }
 
-  function showHeroSlide(direction) {
+  function showHeroSlide(direction: -1 | 1) {
     setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
   }
 
-  function handleHeroKeyDown(event) {
+  function handleHeroKeyDown(event: React.KeyboardEvent<HTMLElement>) {
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
       showHeroSlide(-1);
@@ -1776,12 +1913,12 @@ function App() {
     }
   }
 
-  function handleHeroTouchStart(event) {
+  function handleHeroTouchStart(event: React.TouchEvent<HTMLElement>) {
     heroSwipeStartRef.current = event.touches[0]?.clientX ?? null;
     heroSwipeMovedRef.current = false;
   }
 
-  function handleHeroTouchMove(event) {
+  function handleHeroTouchMove(event: React.TouchEvent<HTMLElement>) {
     if (heroSwipeStartRef.current === null) {
       return;
     }
@@ -1792,7 +1929,7 @@ function App() {
     }
   }
 
-  function handleHeroTouchEnd(event) {
+  function handleHeroTouchEnd(event: React.TouchEvent<HTMLElement>) {
     if (heroSwipeStartRef.current === null) {
       return;
     }
@@ -1811,7 +1948,7 @@ function App() {
     heroSwipeStartRef.current = null;
   }
 
-  function handleHeroClickCapture(event) {
+  function handleHeroClickCapture(event: React.MouseEvent<HTMLElement>) {
     if (!heroSwipeMovedRef.current) {
       return;
     }
@@ -1820,7 +1957,10 @@ function App() {
     event.stopPropagation();
   }
 
-  function handleLiveStatusNotifications(nextStatus, liveDetails) {
+  function handleLiveStatusNotifications(
+    nextStatus: LiveStatusMap,
+    liveDetails: Record<StreamId, LiveStatusDetails | null>,
+  ) {
     const previousStatus = previousLiveStatusRef.current;
     previousLiveStatusRef.current = nextStatus;
 
@@ -1842,9 +1982,9 @@ function App() {
     });
   }
 
-  async function addLiveNotification(player, streamTitle) {
+  async function addLiveNotification(player: MediaPlayer, streamTitle: string) {
     const title = `Wubby is now live on ${player.name}`;
-    const notification = {
+    const notification: WubHubNotification = {
       id: `${player.id}-${Date.now()}`,
       streamId: player.id,
       title,
@@ -1856,7 +1996,7 @@ function App() {
     await sendDeviceNotification(notification);
   }
 
-  async function sendDeviceNotification(notification) {
+  async function sendDeviceNotification(notification: WubHubNotification) {
     try {
       const permissions = await LocalNotifications.checkPermissions();
 
@@ -1884,7 +2024,7 @@ function App() {
     }
   }
 
-  async function toggleNotificationPreference(streamId) {
+  async function toggleNotificationPreference(streamId: StreamId) {
     const nextEnabled = !notificationPrefs[streamId];
 
     if (nextEnabled) {
@@ -1910,7 +2050,7 @@ function App() {
     }
   }
 
-  function dismissNotification(notificationId) {
+  function dismissNotification(notificationId: string) {
     setNotifications((current) => current.filter((notification) => notification.id !== notificationId));
   }
 
@@ -1918,7 +2058,7 @@ function App() {
     setNotifications([]);
   }
 
-  function renderNavItem(item) {
+  function renderNavItem(item: NavItem) {
     const Icon = item.icon;
 
     if (item.type === 'button') {
@@ -2564,9 +2704,10 @@ function App() {
   );
 }
 
-async function getKickLiveStatus() {
+async function getKickLiveStatus(): Promise<LiveStatusDetails> {
   const data = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby');
-  const isLive = Boolean(data?.livestream?.is_live ?? data?.livestream);
+  const livestream = readPath(data, ['livestream']);
+  const isLive = Boolean(readPath(data, ['livestream', 'is_live']) ?? livestream);
   let title = extractKickStreamTitle(data);
   let category = extractKickStreamCategory(data);
   let viewers = extractKickViewerCount(data);
@@ -2585,7 +2726,7 @@ async function getKickLiveStatus() {
   return { isLive, title, category, viewers };
 }
 
-async function getKickPlaybackUrl() {
+async function getKickPlaybackUrl(): Promise<string> {
   const playbackResponse = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby/playback-url');
   const directUrl = extractKickPlaybackUrl(playbackResponse);
 
@@ -2597,7 +2738,7 @@ async function getKickPlaybackUrl() {
   return extractKickPlaybackUrl(channelResponse);
 }
 
-async function requestKickJson(url) {
+async function requestKickJson(url: string): Promise<unknown> {
   const headers = {
     Accept: 'application/json, text/plain, */*',
     'X-Requested-With': 'XMLHttpRequest',
@@ -2641,51 +2782,64 @@ async function requestKickJson(url) {
   return proxyResponse.json();
 }
 
-function extractKickPlaybackUrl(payload) {
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? value as JsonRecord : {};
+}
+
+function readPath(payload: unknown, path: string[]): unknown {
+  return path.reduce<unknown>((current, key) => asRecord(current)[key], payload);
+}
+
+function extractStringCandidate(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function extractKickPlaybackUrl(payload: unknown): string {
   if (typeof payload === 'string') {
     return payload.includes('.m3u8') ? payload : '';
   }
 
   const candidates = [
-    payload?.data,
-    payload?.playback_url,
-    payload?.livestream?.playback_url,
-    payload?.streamer_channel?.playback_url,
-    payload?.user?.streamer_channel?.playback_url,
+    readPath(payload, ['data']),
+    readPath(payload, ['playback_url']),
+    readPath(payload, ['livestream', 'playback_url']),
+    readPath(payload, ['streamer_channel', 'playback_url']),
+    readPath(payload, ['user', 'streamer_channel', 'playback_url']),
   ];
 
-  const playbackUrl = candidates.find((candidate) => typeof candidate === 'string' && candidate.includes('.m3u8'));
+  const playbackUrl = candidates
+    .map(extractStringCandidate)
+    .find((candidate) => candidate.includes('.m3u8'));
   return playbackUrl ?? '';
 }
 
-function extractKickStreamTitle(payload) {
+function extractKickStreamTitle(payload: unknown): string {
   const candidates = [
-    payload?.session_title,
-    payload?.title,
-    payload?.livestream?.session_title,
-    payload?.livestream?.title,
-    payload?.recent_livestream?.session_title,
-    payload?.recent_livestream?.title,
-    payload?.data?.session_title,
-    payload?.data?.title,
-    payload?.data?.livestream?.session_title,
-    payload?.data?.livestream?.title,
+    readPath(payload, ['session_title']),
+    readPath(payload, ['title']),
+    readPath(payload, ['livestream', 'session_title']),
+    readPath(payload, ['livestream', 'title']),
+    readPath(payload, ['recent_livestream', 'session_title']),
+    readPath(payload, ['recent_livestream', 'title']),
+    readPath(payload, ['data', 'session_title']),
+    readPath(payload, ['data', 'title']),
+    readPath(payload, ['data', 'livestream', 'session_title']),
+    readPath(payload, ['data', 'livestream', 'title']),
   ];
 
-  const title = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim());
-  return title?.trim() ?? '';
+  return candidates.map(extractStringCandidate).find(Boolean) ?? '';
 }
 
-function extractKickStreamCategory(payload) {
+function extractKickStreamCategory(payload: unknown): string {
   const categories = [
-    payload?.livestream?.category,
-    payload?.livestream?.categories?.[0],
-    payload?.category,
-    payload?.categories?.[0],
-    payload?.data?.livestream?.category,
-    payload?.data?.livestream?.categories?.[0],
-    payload?.data?.category,
-    payload?.data?.categories?.[0],
+    readPath(payload, ['livestream', 'category']),
+    readPath(payload, ['livestream', 'categories', '0']),
+    readPath(payload, ['category']),
+    readPath(payload, ['categories', '0']),
+    readPath(payload, ['data', 'livestream', 'category']),
+    readPath(payload, ['data', 'livestream', 'categories', '0']),
+    readPath(payload, ['data', 'category']),
+    readPath(payload, ['data', 'categories', '0']),
   ];
 
   const category = categories
@@ -2694,33 +2848,34 @@ function extractKickStreamCategory(payload) {
         return candidate;
       }
 
-      return candidate?.name ?? candidate?.title ?? candidate?.slug ?? '';
+      const record = asRecord(candidate);
+      return extractStringCandidate(record.name ?? record.title ?? record.slug);
     })
     .find((candidate) => typeof candidate === 'string' && candidate.trim());
 
   return category?.trim() ?? '';
 }
 
-function extractKickViewerCount(payload) {
+function extractKickViewerCount(payload: unknown): number | null {
   const candidates = [
-    payload?.livestream?.viewer_count,
-    payload?.livestream?.viewers_count,
-    payload?.livestream?.viewers,
-    payload?.viewer_count,
-    payload?.viewers_count,
-    payload?.viewers,
-    payload?.data?.livestream?.viewer_count,
-    payload?.data?.livestream?.viewers_count,
-    payload?.data?.livestream?.viewers,
-    payload?.data?.viewer_count,
-    payload?.data?.viewers_count,
-    payload?.data?.viewers,
+    readPath(payload, ['livestream', 'viewer_count']),
+    readPath(payload, ['livestream', 'viewers_count']),
+    readPath(payload, ['livestream', 'viewers']),
+    readPath(payload, ['viewer_count']),
+    readPath(payload, ['viewers_count']),
+    readPath(payload, ['viewers']),
+    readPath(payload, ['data', 'livestream', 'viewer_count']),
+    readPath(payload, ['data', 'livestream', 'viewers_count']),
+    readPath(payload, ['data', 'livestream', 'viewers']),
+    readPath(payload, ['data', 'viewer_count']),
+    readPath(payload, ['data', 'viewers_count']),
+    readPath(payload, ['data', 'viewers']),
   ];
 
   return normalizeViewerCount(candidates.find((candidate) => candidate !== undefined && candidate !== null));
 }
 
-function getPlayableKickPlaybackUrl(playbackUrl) {
+function getPlayableKickPlaybackUrl(playbackUrl: string): string {
   if (Capacitor.getPlatform() === 'ios') {
     return playbackUrl;
   }
@@ -2728,7 +2883,7 @@ function getPlayableKickPlaybackUrl(playbackUrl) {
   return `/kick-hls?url=${encodeURIComponent(playbackUrl)}`;
 }
 
-function getKickPlaybackExpiryMs(playbackUrl) {
+function getKickPlaybackExpiryMs(playbackUrl: string): number {
   try {
     const token = new URL(playbackUrl).searchParams.get('token');
     const payload = token?.split('.')[1];
@@ -2750,7 +2905,7 @@ function getKickPlaybackExpiryMs(playbackUrl) {
   }
 }
 
-async function getTwitchLiveStatus() {
+async function getTwitchLiveStatus(): Promise<LiveStatusDetails> {
   try {
     const graphStatus = await getTwitchGraphqlLiveStatus();
     if (graphStatus) {
@@ -2818,7 +2973,7 @@ async function getTwitchLiveStatus() {
   return { isLive, title, category, viewers };
 }
 
-async function getTwitchGraphqlLiveStatus() {
+async function getTwitchGraphqlLiveStatus(): Promise<LiveStatusDetails | null> {
   const payload = {
     operationName: 'WubHubChannelLiveStatus',
     variables: { login: 'paymoneywubby' },
@@ -2894,7 +3049,7 @@ async function getTwitchGraphqlLiveStatus() {
   };
 }
 
-function normalizeViewerCount(value) {
+function normalizeViewerCount(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.max(0, Math.round(value));
   }
@@ -2927,7 +3082,7 @@ function normalizeViewerCount(value) {
   return Math.max(0, Math.round(numeric * multiplier));
 }
 
-function formatViewerCount(value) {
+function formatViewerCount(value: unknown): string {
   const count = normalizeViewerCount(value);
 
   if (count === null) {
@@ -2945,7 +3100,7 @@ function formatViewerCount(value) {
   return count.toLocaleString();
 }
 
-async function getLatestYoutubeVideo(channel, fallback) {
+async function getLatestYoutubeVideo(channel: YoutubeChannel, fallback: LatestYoutubeVideo): Promise<LatestYoutubeVideo> {
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
 
   try {
@@ -2956,7 +3111,7 @@ async function getLatestYoutubeVideo(channel, fallback) {
   }
 }
 
-async function fetchYoutubeFeed(feedUrl) {
+async function fetchYoutubeFeed(feedUrl: string): Promise<string> {
   if (Capacitor.isNativePlatform()) {
     const response = await CapacitorHttp.get({ url: feedUrl });
 
@@ -2988,7 +3143,11 @@ async function fetchYoutubeFeed(feedUrl) {
   return proxyResponse.text();
 }
 
-function parseLatestYoutubeVideo(feedXml, channel, fallback) {
+function parseLatestYoutubeVideo(
+  feedXml: string,
+  channel: YoutubeChannel,
+  fallback: LatestYoutubeVideo,
+): LatestYoutubeVideo {
   const document = new DOMParser().parseFromString(feedXml, 'application/xml');
   const entries = Array.from(document.querySelectorAll('entry'));
 
@@ -3021,12 +3180,12 @@ function parseLatestYoutubeVideo(feedXml, channel, fallback) {
   };
 }
 
-function isYoutubeShortEntry(entry) {
+function isYoutubeShortEntry(entry: Element): boolean {
   const url = entry.querySelector('link[rel="alternate"]')?.getAttribute('href') ?? '';
   return /youtube\.com\/shorts\//i.test(url);
 }
 
-function readStoredJson(key, fallback) {
+function readStoredJson<T>(key: string, fallback: T): T {
   try {
     const stored = window.localStorage.getItem(key);
     return stored ? JSON.parse(stored) : fallback;
@@ -3035,11 +3194,17 @@ function readStoredJson(key, fallback) {
   }
 }
 
-function formatNotificationTime(timestamp) {
+function formatNotificationTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(timestamp));
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Unable to find app root element');
+}
+
+createRoot(rootElement).render(<App />);

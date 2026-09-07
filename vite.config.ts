@@ -1,8 +1,18 @@
 import { defineConfig } from 'vite';
+import type { Connect } from 'vite';
 import react from '@vitejs/plugin-react';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
+type ViteDevServerLike = {
+  middlewares: Connect.Server;
+  httpServer?: {
+    address(): AddressInfo | string | null;
+  } | null;
+};
 
 function kickHlsProxy() {
-  async function handleKickHlsProxy(req, res) {
+  async function handleKickHlsProxy(req: IncomingMessage, res: ServerResponse) {
     const requestUrl = new URL(req.url, 'http://localhost');
     const targetUrl = requestUrl.searchParams.get('url');
 
@@ -40,16 +50,16 @@ function kickHlsProxy() {
       res.end(body);
     } catch (error) {
       res.statusCode = 502;
-      res.end(`Kick HLS proxy failed: ${error.message}`);
+      res.end(`Kick HLS proxy failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   return {
     name: 'wubhub-kick-hls-proxy',
-    configureServer(server) {
+    configureServer(server: ViteDevServerLike) {
       server.middlewares.use('/kick-hls', handleKickHlsProxy);
     },
-    configurePreviewServer(server) {
+    configurePreviewServer(server: ViteDevServerLike) {
       server.middlewares.use('/kick-hls', handleKickHlsProxy);
     },
   };
