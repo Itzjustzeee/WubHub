@@ -26,12 +26,75 @@ import {
 } from 'lucide-react';
 import './styles.css';
 
-const NativeVod = registerPlugin('NativeVod');
-const NativeOrientation = registerPlugin('NativeOrientation');
-const NativeBackgroundLive = registerPlugin('NativeBackgroundLive');
-const NativeExternal = registerPlugin('NativeExternal');
-const NativeChatAuth = registerPlugin('NativeChatAuth');
-const NativePlatform = registerPlugin('NativePlatform');
+type StreamId = 'kick' | 'twitch';
+type ViewName = 'home' | 'stream' | 'vods';
+type StreamFullscreenMode = 'none' | 'native' | 'overlay';
+type NotificationTab = 'notifications' | 'settings';
+type LiveStatusMap = Record<StreamId, boolean>;
+
+type LiveDetails = {
+  title: string;
+  category: string;
+  viewers: number | null;
+};
+
+type LiveStatusDetails = LiveDetails & {
+  isLive: boolean;
+};
+
+type LiveDetailsMap = Record<StreamId, LiveDetails>;
+type NotificationPrefs = LiveStatusMap;
+
+type WubHubNotification = {
+  id: string;
+  streamId: StreamId;
+  title: string;
+  message: string;
+  createdAt: number;
+};
+
+type NativeVodPlugin = {
+  open(options: { url: string }): Promise<{ target?: ViewName | StreamId | 'more' }>;
+};
+
+type NativeOrientationPlugin = {
+  enterFullscreen(): Promise<void>;
+  exitFullscreen(): Promise<void>;
+  lockLandscape(): Promise<void>;
+  lockPortrait(): Promise<void>;
+};
+
+type NativeBackgroundLivePlugin = {
+  configure(options: LiveStatusMap): Promise<void>;
+};
+
+type NativeUrlPlugin = {
+  open(options: { url: string }): Promise<void>;
+};
+
+type NativePlatformPlugin = {
+  getInfo(): Promise<{ isTelevision?: boolean }>;
+};
+
+declare global {
+  interface Document {
+    webkitFullscreenElement?: Element | null;
+    webkitExitFullscreen?: () => Promise<void>;
+    msExitFullscreen?: () => Promise<void>;
+  }
+
+  interface HTMLElement {
+    webkitRequestFullscreen?: () => Promise<void>;
+    msRequestFullscreen?: () => Promise<void>;
+  }
+}
+
+const NativeVod = registerPlugin<NativeVodPlugin>('NativeVod');
+const NativeOrientation = registerPlugin<NativeOrientationPlugin>('NativeOrientation');
+const NativeBackgroundLive = registerPlugin<NativeBackgroundLivePlugin>('NativeBackgroundLive');
+const NativeExternal = registerPlugin<NativeUrlPlugin>('NativeExternal');
+const NativeChatAuth = registerPlugin<NativeUrlPlugin>('NativeChatAuth');
+const NativePlatform = registerPlugin<NativePlatformPlugin>('NativePlatform');
 
 const links = {
   kick: 'https://kick.com/paymoneywubby?theater=true',
@@ -58,7 +121,17 @@ const streamChats = {
   twitch: `https://www.twitch.tv/embed/paymoneywubby/chat?parent=${encodeURIComponent(twitchParent)}&darkpopout`,
 };
 
-const mediaPlayers = [
+type MediaPlayer = {
+  id: StreamId;
+  name: string;
+  src: string;
+  fullscreenSrc: string;
+  accent: string;
+  logo: string;
+  className: StreamId;
+};
+
+const mediaPlayers: MediaPlayer[] = [
   {
     id: 'kick',
     name: 'Kick',
@@ -79,16 +152,19 @@ const mediaPlayers = [
   },
 ];
 
-const initialLiveStatus = mediaPlayers.reduce(
+const initialLiveStatus = mediaPlayers.reduce<LiveStatusMap>(
   (status, player) => ({ ...status, [player.id]: false }),
-  {},
+  { kick: false, twitch: false },
 );
-const initialLiveDetails = mediaPlayers.reduce(
+const initialLiveDetails = mediaPlayers.reduce<LiveDetailsMap>(
   (details, player) => ({ ...details, [player.id]: { title: '', category: '', viewers: null } }),
-  {},
+  {
+    kick: { title: '', category: '', viewers: null },
+    twitch: { title: '', category: '', viewers: null },
+  },
 );
 
-function YoutubeIcon({ size = 24, ...props }) {
+function YoutubeIcon({ size = 24, ...props }: React.SVGProps<SVGSVGElement> & { size?: number }) {
   return (
     <svg
       width={size}
@@ -109,10 +185,10 @@ function YoutubeIcon({ size = 24, ...props }) {
 
 const notificationStorageKey = 'wubhub-notifications';
 const notificationPrefsStorageKey = 'wubhub-notification-prefs';
-const defaultNotificationPrefs = { kick: false, twitch: false };
+const defaultNotificationPrefs: NotificationPrefs = { kick: false, twitch: false };
 const liveStatusTestMode = new URLSearchParams(window.location.search).has('testStreams');
 const drawerAnimationMs = 260;
-const testLiveDetails = {
+const testLiveDetails: Record<StreamId, LiveStatusDetails> = {
   kick: { isLive: true, title: 'Test Kick stream', category: 'Just Chatting', viewers: 12842 },
   twitch: { isLive: true, title: 'Test Twitch stream', category: 'Magic: The Gathering', viewers: 9317 },
 };
@@ -129,7 +205,7 @@ function waitForRenderFrame() {
   });
 }
 
-function withTwitchReloadToken(src, token) {
+function withTwitchReloadToken(src: string, token: number) {
   if (!src || !src.includes('player.twitch.tv')) {
     return src;
   }
@@ -139,6 +215,10 @@ function withTwitchReloadToken(src, token) {
 }
 
 class NativeKickHlsLoader {
+  context: any;
+  stats: any;
+  cancelled: boolean;
+
   constructor() {
     this.context = null;
     this.stats = createHlsLoadStats();
@@ -162,7 +242,7 @@ class NativeKickHlsLoader {
     return null;
   }
 
-  async load(context, config, callbacks) {
+  async load(context: any, config: any, callbacks: any) {
     this.context = context;
     this.cancelled = false;
     this.stats = createHlsLoadStats();
@@ -188,7 +268,7 @@ class NativeKickHlsLoader {
           readTimeout: 20000,
         }),
         timeout,
-      ]);
+      ]) as any;
 
       if (this.cancelled) {
         callbacks.onAbort?.(this.stats, context, response);
@@ -1134,15 +1214,15 @@ function App() {
 
     async function checkLiveStatus() {
       if (liveStatusTestMode) {
-        const nextStatus = { kick: true, twitch: true };
-        const nextDetails = mediaPlayers.reduce((details, player) => ({
+        const nextStatus: LiveStatusMap = { kick: true, twitch: true };
+        const nextDetails = mediaPlayers.reduce<LiveDetailsMap>((details, player) => ({
           ...details,
           [player.id]: {
             title: testLiveDetails[player.id].title,
             category: testLiveDetails[player.id].category,
             viewers: testLiveDetails[player.id].viewers,
           },
-        }), {});
+        }), initialLiveDetails);
 
         if (!cancelled) {
           setLiveStatus(nextStatus);
@@ -1154,15 +1234,15 @@ function App() {
       }
 
       const [kick, twitch] = await Promise.allSettled([getKickLiveStatus(), getTwitchLiveStatus()]);
-      const liveDetails = {
+      const liveDetails: Record<StreamId, LiveStatusDetails | null> = {
         kick: kick.status === 'fulfilled' ? kick.value : null,
         twitch: twitch.status === 'fulfilled' ? twitch.value : null,
       };
-      const nextStatus = {
+      const nextStatus: LiveStatusMap = {
         kick: liveDetails.kick ? liveDetails.kick.isLive : liveStatusRef.current.kick,
         twitch: liveDetails.twitch ? liveDetails.twitch.isLive : liveStatusRef.current.twitch,
       };
-      const nextDetails = mediaPlayers.reduce((details, player) => {
+      const nextDetails = mediaPlayers.reduce<LiveDetailsMap>((details, player) => {
         const platformDetails = liveDetails[player.id];
 
         return {
@@ -1173,7 +1253,7 @@ function App() {
             viewers: platformDetails?.isLive ? platformDetails?.viewers ?? null : null,
           },
         };
-      }, {});
+      }, initialLiveDetails);
 
       if (!cancelled) {
         handleLiveStatusNotifications(nextStatus, liveDetails);
