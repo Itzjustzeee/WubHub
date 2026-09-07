@@ -12,6 +12,7 @@ import {
   ExternalLink,
   HeartHandshake,
   Home,
+  Info,
   Maximize2,
   MessageCircle,
   Radio,
@@ -92,6 +93,7 @@ const notificationStorageKey = 'wubhub-notifications';
 const notificationPrefsStorageKey = 'wubhub-notification-prefs';
 const defaultNotificationPrefs = { kick: false, twitch: false };
 const liveStatusTestMode = new URLSearchParams(window.location.search).has('testStreams');
+const drawerAnimationMs = 260;
 const testLiveDetails = {
   kick: { isLive: true, title: 'Test Kick stream', category: 'Just Chatting', viewers: 12842 },
   twitch: { isLive: true, title: 'Test Twitch stream', category: 'Magic: The Gathering', viewers: 9317 },
@@ -795,12 +797,20 @@ const navGroups = [
   },
 ];
 
+const mobileMoreActions = [
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'about', label: 'About', icon: Info },
+  { id: 'contact', label: 'Contact me', icon: MessageCircle },
+];
+
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [view, setView] = useState('home');
   const [isTelevision, setIsTelevision] = useState(false);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [linksDrawerOpen, setLinksDrawerOpen] = useState(false);
+  const [linksDrawerClosing, setLinksDrawerClosing] = useState(false);
+  const [viewTransition, setViewTransition] = useState('');
   const [latestYoutubeVideos, setLatestYoutubeVideos] = useState(fallbackLatestVideos);
   const [selectedStream, setSelectedStream] = useState(mediaPlayers[0].id);
   const [streamFullscreen, setStreamFullscreen] = useState(false);
@@ -814,8 +824,10 @@ function App() {
   const [liveStatusChecked, setLiveStatusChecked] = useState(false);
   const [liveDetails, setLiveDetails] = useState(initialLiveDetails);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
   const [vodStatus, setVodStatus] = useState('');
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [notificationDrawerClosing, setNotificationDrawerClosing] = useState(false);
   const [notificationTab, setNotificationTab] = useState('notifications');
   const [notificationPrefs, setNotificationPrefs] = useState(() => ({
     ...defaultNotificationPrefs,
@@ -833,6 +845,10 @@ function App() {
   const mobileMenuOpenRef = useRef(mobileMenuOpen);
   const linksDrawerOpenRef = useRef(linksDrawerOpen);
   const notificationDrawerOpenRef = useRef(notificationDrawerOpen);
+  const viewTransitionTimerRef = useRef(null);
+  const mobileMenuTimerRef = useRef(null);
+  const linksDrawerTimerRef = useRef(null);
+  const notificationDrawerTimerRef = useRef(null);
   const heroSwipeStartRef = useRef(null);
   const heroSwipeMovedRef = useRef(false);
   const liveStatusRef = useRef(liveStatus);
@@ -945,6 +961,24 @@ function App() {
   useEffect(() => {
     notificationDrawerOpenRef.current = notificationDrawerOpen;
   }, [notificationDrawerOpen]);
+
+  useEffect(() => () => {
+    if (viewTransitionTimerRef.current) {
+      window.clearTimeout(viewTransitionTimerRef.current);
+    }
+
+    if (mobileMenuTimerRef.current) {
+      window.clearTimeout(mobileMenuTimerRef.current);
+    }
+
+    if (linksDrawerTimerRef.current) {
+      window.clearTimeout(linksDrawerTimerRef.current);
+    }
+
+    if (notificationDrawerTimerRef.current) {
+      window.clearTimeout(notificationDrawerTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     liveStatusRef.current = liveStatus;
@@ -1266,17 +1300,17 @@ function App() {
         }
 
         if (notificationDrawerOpenRef.current) {
-          setNotificationDrawerOpen(false);
+          closeNotificationDrawer();
           return;
         }
 
         if (mobileMenuOpenRef.current) {
-          setMobileMenuOpen(false);
+          closeMobileMenu();
           return;
         }
 
         if (linksDrawerOpenRef.current) {
-          setLinksDrawerOpen(false);
+          closeLinksDrawer();
           return;
         }
 
@@ -1308,24 +1342,122 @@ function App() {
   }, [isNativeApp]);
 
   async function openStream(streamId) {
+    const shouldTransition = viewRef.current !== 'stream' || selectedStream !== streamId;
     setSelectedStream(streamId);
     setStreamFrameSrc(mediaPlayers.find((player) => player.id === streamId)?.src ?? mediaPlayers[0].src);
     setView('stream');
-    setMobileMenuOpen(false);
-    setLinksDrawerOpen(false);
+    if (shouldTransition) {
+      runViewTransition('page-swipe-to-stream');
+    }
+    closeMobileMenu();
+    closeLinksDrawer();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function goHome() {
+    const shouldTransition = viewRef.current !== 'home';
     setView('home');
-    setMobileMenuOpen(false);
-    setLinksDrawerOpen(false);
+    if (shouldTransition) {
+      runViewTransition('page-swipe-to-home');
+    }
+    closeMobileMenu();
+    closeLinksDrawer();
+  }
+
+  function runViewTransition(className) {
+    if (viewTransitionTimerRef.current) {
+      window.clearTimeout(viewTransitionTimerRef.current);
+    }
+
+    setViewTransition('');
+
+    window.requestAnimationFrame(() => {
+      setViewTransition(className);
+      viewTransitionTimerRef.current = window.setTimeout(() => {
+        setViewTransition('');
+      }, 820);
+    });
+  }
+
+  function openNotificationDrawer() {
+    if (notificationDrawerTimerRef.current) {
+      window.clearTimeout(notificationDrawerTimerRef.current);
+    }
+
+    setNotificationDrawerClosing(false);
+    setNotificationDrawerOpen(true);
+  }
+
+  function closeNotificationDrawer() {
+    if (!notificationDrawerOpenRef.current) {
+      return;
+    }
+
+    if (notificationDrawerTimerRef.current) {
+      window.clearTimeout(notificationDrawerTimerRef.current);
+    }
+
+    setNotificationDrawerClosing(true);
+    notificationDrawerTimerRef.current = window.setTimeout(() => {
+      setNotificationDrawerOpen(false);
+      setNotificationDrawerClosing(false);
+    }, drawerAnimationMs);
+  }
+
+  function openMobileMenu() {
+    if (mobileMenuTimerRef.current) {
+      window.clearTimeout(mobileMenuTimerRef.current);
+    }
+
+    setMobileMenuClosing(false);
+    setMobileMenuOpen(true);
+  }
+
+  function closeMobileMenu() {
+    if (!mobileMenuOpenRef.current) {
+      return;
+    }
+
+    if (mobileMenuTimerRef.current) {
+      window.clearTimeout(mobileMenuTimerRef.current);
+    }
+
+    setMobileMenuClosing(true);
+    mobileMenuTimerRef.current = window.setTimeout(() => {
+      setMobileMenuOpen(false);
+      setMobileMenuClosing(false);
+    }, drawerAnimationMs);
+  }
+
+  function openLinksDrawer() {
+    if (linksDrawerTimerRef.current) {
+      window.clearTimeout(linksDrawerTimerRef.current);
+    }
+
+    setLinksDrawerClosing(false);
+    setLinksDrawerOpen(true);
+  }
+
+  function closeLinksDrawer() {
+    if (!linksDrawerOpenRef.current) {
+      return;
+    }
+
+    if (linksDrawerTimerRef.current) {
+      window.clearTimeout(linksDrawerTimerRef.current);
+    }
+
+    setLinksDrawerClosing(true);
+    linksDrawerTimerRef.current = window.setTimeout(() => {
+      setLinksDrawerOpen(false);
+      setLinksDrawerClosing(false);
+    }, drawerAnimationMs);
   }
 
   async function openVods() {
     setView('vods');
-    setMobileMenuOpen(false);
-    setLinksDrawerOpen(false);
+    closeMobileMenu();
+    closeLinksDrawer();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     await launchVodsArchive();
@@ -1362,7 +1494,7 @@ function App() {
   function handleExternalLinkClick(url) {
     return (event) => {
       event.preventDefault();
-      setLinksDrawerOpen(false);
+      closeLinksDrawer();
       openExternalLink(url);
     };
   }
@@ -1380,8 +1512,8 @@ function App() {
 
     if (target === 'more') {
       setView('home');
-      setMobileMenuOpen(true);
-      setLinksDrawerOpen(false);
+      openMobileMenu();
+      closeLinksDrawer();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -1763,7 +1895,7 @@ function App() {
         </nav>
       </aside>
 
-      <section id="home" className="content">
+      <section id="home" className={`content ${viewTransition}`}>
         <header className="topbar">
           <button className="mobile-brand" type="button" onClick={goHome}>
             <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
@@ -1779,7 +1911,7 @@ function App() {
             className="icon-button notification-button"
             type="button"
             aria-label="Notifications"
-            onClick={() => setNotificationDrawerOpen(true)}
+            onClick={openNotificationDrawer}
           >
             <Bell size={20} aria-hidden="true" />
             {notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
@@ -1787,12 +1919,12 @@ function App() {
         </header>
 
         {notificationDrawerOpen && (
-          <div className="notification-layer" role="presentation">
+          <div className={`notification-layer ${notificationDrawerClosing ? 'is-closing' : 'is-opening'}`} role="presentation">
             <button
               className="notification-backdrop"
               type="button"
               aria-label="Close notifications"
-              onClick={() => setNotificationDrawerOpen(false)}
+              onClick={closeNotificationDrawer}
             />
             <aside className="notification-drawer" aria-label="Notifications">
               <div className="drawer-header">
@@ -1800,7 +1932,7 @@ function App() {
                   <strong>Notifications</strong>
                   <span>{notifications.length} active</span>
                 </div>
-                <button className="drawer-icon-button" type="button" aria-label="Close notifications" onClick={() => setNotificationDrawerOpen(false)}>
+                <button className="drawer-icon-button" type="button" aria-label="Close notifications" onClick={closeNotificationDrawer}>
                   <X size={18} aria-hidden="true" />
                 </button>
               </div>
@@ -1892,13 +2024,26 @@ function App() {
         )}
 
         {mobileMenuOpen && (
-          <nav className="mobile-menu" aria-label="Mobile menu">
-            {navGroups.map((group) => (
+          <nav className={`mobile-menu ${mobileMenuClosing ? 'is-closing' : 'is-opening'}`} aria-label="Mobile menu">
+            {navGroups.filter((group) => group.label === 'Watch').map((group) => (
               <div className="nav-group" key={group.label}>
                 <p>{group.label}</p>
                 {group.items.map(renderNavItem)}
               </div>
             ))}
+            <div className="mobile-more-actions" aria-label="More menu actions">
+              {mobileMoreActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button type="button" key={action.id}>
+                    <span>
+                      <Icon size={28} aria-hidden="true" />
+                    </span>
+                    <strong>{action.label}</strong>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
         )}
 
@@ -2193,7 +2338,7 @@ function App() {
             <button
               className="mobile-links-button"
               type="button"
-              onClick={() => setLinksDrawerOpen(true)}
+              onClick={openLinksDrawer}
             >
               <Ellipsis size={24} aria-hidden="true" />
               <span>More Links</span>
@@ -2233,7 +2378,11 @@ function App() {
       </section>
 
       {linksDrawerOpen && (
-        <div className="links-drawer-backdrop" role="presentation" onClick={() => setLinksDrawerOpen(false)}>
+        <div
+          className={`links-drawer-backdrop ${linksDrawerClosing ? 'is-closing' : 'is-opening'}`}
+          role="presentation"
+          onClick={closeLinksDrawer}
+        >
           <aside
             className="links-drawer"
             aria-label="More links"
@@ -2241,7 +2390,7 @@ function App() {
           >
             <div className="links-drawer-header">
               <strong>More Links</strong>
-              <button type="button" onClick={() => setLinksDrawerOpen(false)} aria-label="Close links">
+              <button type="button" onClick={closeLinksDrawer} aria-label="Close links">
                 <X size={19} aria-hidden="true" />
               </button>
             </div>
@@ -2298,7 +2447,7 @@ function App() {
           <Video size={21} aria-hidden="true" />
           <span>VODs</span>
         </button>
-        <button type="button" onClick={() => setMobileMenuOpen((isOpen) => !isOpen)}>
+        <button type="button" onClick={mobileMenuOpen ? closeMobileMenu : openMobileMenu}>
           <Ellipsis size={21} aria-hidden="true" />
           <span>More</span>
         </button>
