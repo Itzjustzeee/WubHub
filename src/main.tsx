@@ -1,10 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core';
+import type { HttpResponse, HttpResponseType } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import Hls from 'hls.js';
+import type {
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+  LoaderResponse,
+  LoaderStats,
+} from 'hls.js';
 import {
   Bell,
   BellRing,
@@ -25,173 +33,38 @@ import {
   Video,
   X,
 } from 'lucide-react';
+import type {
+  HeroSlide,
+  HlsLevel,
+  HlsVideoProps,
+  JsonRecord,
+  KickPlayerProps,
+  KickPlaybackStatus,
+  LatestYoutubeVideo,
+  LinkKey,
+  LiveDetailsMap,
+  LiveStatusDetails,
+  LiveStatusMap,
+  MediaPlayer,
+  MobileMoreAction,
+  NativeBackgroundLivePlugin,
+  NativeOrientationPlugin,
+  NativePlatformPlugin,
+  NativeUrlPlugin,
+  NativeVodPlugin,
+  NavGroup,
+  NavItem,
+  NotificationPrefs,
+  NotificationTab,
+  StreamFullscreenMode,
+  StreamId,
+  SupportCard,
+  TwitchGraphqlResponse,
+  ViewName,
+  WubHubNotification,
+  YoutubeChannel,
+} from './types';
 import './styles.css';
-
-type StreamId = 'kick' | 'twitch';
-type ViewName = 'home' | 'stream' | 'vods';
-type StreamFullscreenMode = 'none' | 'native' | 'overlay';
-type NotificationTab = 'notifications' | 'settings';
-type LiveStatusMap = Record<StreamId, boolean>;
-type LinkKey =
-  | 'kick'
-  | 'kickEmbed'
-  | 'kickChatSignIn'
-  | 'twitch'
-  | 'twitchChatSignIn'
-  | 'patreon'
-  | 'shop'
-  | 'subreddit'
-  | 'discord'
-  | 'x'
-  | 'vodArchive'
-  | 'tts'
-  | 'highlights'
-  | 'clips'
-  | 'magicMonday';
-
-type IconComponent = ComponentType<{
-  size?: number;
-  className?: string;
-  'aria-hidden'?: boolean | 'true' | 'false';
-}>;
-
-type LiveDetails = {
-  title: string;
-  category: string;
-  viewers: number | null;
-};
-
-type LiveStatusDetails = LiveDetails & {
-  isLive: boolean;
-};
-
-type LiveDetailsMap = Record<StreamId, LiveDetails>;
-type NotificationPrefs = LiveStatusMap;
-
-type WubHubNotification = {
-  id: string;
-  streamId: StreamId;
-  title: string;
-  message: string;
-  createdAt: number;
-};
-
-type HlsLevel = {
-  height?: number;
-  bitrate?: number;
-};
-
-type SupportCardClassName = 'patreon' | 'shop' | 'vods' | 'discord' | 'reddit' | 'x-social';
-type SupportCard = {
-  name: string;
-  url: string;
-  view?: 'vods';
-  label: string;
-  detail: string;
-  icon: IconComponent;
-  image?: string;
-  className: SupportCardClassName;
-};
-
-type YoutubeCardClassName = 'highlights' | 'clips' | 'magic';
-type YoutubeChannel = {
-  name: string;
-  channelId: string;
-  url: string;
-  detail: string;
-  image: string;
-  banner: string;
-  className: YoutubeCardClassName;
-};
-
-type LatestYoutubeVideo = {
-  channelName: string;
-  title: string;
-  url: string;
-  image: string;
-  channelImage: string;
-  className: YoutubeCardClassName;
-};
-
-type HeroSlide = {
-  type: 'store' | 'youtube';
-  eyebrow: string;
-  title: string;
-  detail: string;
-  url: string;
-  image: string;
-  className: 'store' | YoutubeCardClassName;
-  channelImage?: string;
-};
-
-type MobileMoreAction = {
-  id: 'settings' | 'about' | 'contact';
-  label: string;
-  icon: IconComponent;
-};
-
-type NavItem =
-  | { type: 'button'; id: 'home'; label: string; icon: IconComponent }
-  | { type: 'stream'; id: StreamId; label: string; icon: IconComponent }
-  | { type: 'vods'; id: 'vodArchive'; label: string; icon: IconComponent }
-  | { type: 'link'; id: string; label: string; icon: IconComponent; href: string };
-
-type NavGroup = {
-  label: 'Watch' | 'YouTube' | 'Community' | 'Merch';
-  items: NavItem[];
-};
-
-type JsonRecord = Record<string, unknown>;
-
-type TwitchGraphqlResponse = {
-  data?: {
-    user?: {
-      stream?: {
-        title?: unknown;
-        viewersCount?: unknown;
-        game?: {
-          name?: unknown;
-        } | null;
-      } | null;
-    } | null;
-  };
-};
-
-type NativeVodPlugin = {
-  open(options: { url: string }): Promise<{ target?: ViewName | StreamId | 'more' }>;
-};
-
-type NativeOrientationPlugin = {
-  enterFullscreen(): Promise<void>;
-  exitFullscreen(): Promise<void>;
-  lockLandscape(): Promise<void>;
-  lockPortrait(): Promise<void>;
-};
-
-type NativeBackgroundLivePlugin = {
-  configure(options: LiveStatusMap): Promise<void>;
-};
-
-type NativeUrlPlugin = {
-  open(options: { url: string }): Promise<void>;
-};
-
-type NativePlatformPlugin = {
-  getInfo(): Promise<{ isTelevision?: boolean }>;
-};
-
-declare global {
-  interface Document {
-    webkitFullscreenElement?: Element | null;
-    webkitExitFullscreen?: () => Promise<void>;
-    msExitFullscreen?: () => Promise<void>;
-  }
-
-  interface HTMLElement {
-    webkitRequestFullscreen?: () => Promise<void>;
-    msRequestFullscreen?: () => Promise<void>;
-  }
-}
 
 const NativeVod = registerPlugin<NativeVodPlugin>('NativeVod');
 const NativeOrientation = registerPlugin<NativeOrientationPlugin>('NativeOrientation');
@@ -223,16 +96,6 @@ const twitchGraphqlClientId = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 const streamChats: Record<StreamId, string> = {
   kick: 'https://chat.kick.cx/embed/paymoneywubby',
   twitch: `https://www.twitch.tv/embed/paymoneywubby/chat?parent=${encodeURIComponent(twitchParent)}&darkpopout`,
-};
-
-type MediaPlayer = {
-  id: StreamId;
-  name: string;
-  src: string;
-  fullscreenSrc: string;
-  accent: string;
-  logo: string;
-  className: StreamId;
 };
 
 const mediaPlayers: MediaPlayer[] = [
@@ -318,12 +181,12 @@ function withTwitchReloadToken(src: string, token: number) {
   return `${src}${separator}wubhub_reload=${token}`;
 }
 
-class NativeKickHlsLoader {
-  context: any;
-  stats: any;
+class NativeKickHlsLoader implements Loader<LoaderContext> {
+  context: LoaderContext | null;
+  stats: LoaderStats;
   cancelled: boolean;
 
-  constructor() {
+  constructor(_config?: unknown) {
     this.context = null;
     this.stats = createHlsLoadStats();
     this.cancelled = false;
@@ -342,19 +205,27 @@ class NativeKickHlsLoader {
     return 0;
   }
 
-  getResponseHeader() {
+  getResponseHeader(_name: string) {
     return null;
   }
 
-  async load(context: any, config: any, callbacks: any) {
+  load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>) {
+    void this.loadWithCapacitor(context, config, callbacks);
+  }
+
+  private async loadWithCapacitor(
+    context: LoaderContext,
+    config: LoaderConfiguration,
+    callbacks: LoaderCallbacks<LoaderContext>,
+  ) {
     this.context = context;
     this.cancelled = false;
     this.stats = createHlsLoadStats();
     this.stats.loading.start = performance.now();
 
     const timeoutMs = config?.loadPolicy?.maxLoadTimeMs ?? config?.timeout ?? 20000;
-    const responseType = context.responseType === 'arraybuffer' ? 'arraybuffer' : 'text';
-    const timeout = new Promise((_, reject) => {
+    const responseType: HttpResponseType = context.responseType === 'arraybuffer' ? 'arraybuffer' : 'text';
+    const timeout = new Promise<never>((_, reject) => {
       window.setTimeout(() => reject(new Error('Kick HLS request timed out')), timeoutMs);
     });
 
@@ -372,10 +243,10 @@ class NativeKickHlsLoader {
           readTimeout: 20000,
         }),
         timeout,
-      ]) as any;
+      ]) as HttpResponse;
 
       if (this.cancelled) {
-        callbacks.onAbort?.(this.stats, context, response);
+        callbacks.onAbort?.(this.stats, context, null);
         return;
       }
 
@@ -391,12 +262,12 @@ class NativeKickHlsLoader {
       this.stats.loading.end = performance.now();
 
       if (response.status < 200 || response.status >= 300) {
-        callbacks.onError(
-          { code: response.status, text: `Kick HLS request failed with ${response.status}` },
-          context,
-          response,
-          this.stats,
-        );
+      callbacks.onError(
+        { code: response.status, text: `Kick HLS request failed with ${response.status}` },
+        context,
+        null,
+        this.stats,
+      );
         return;
       }
 
@@ -405,11 +276,11 @@ class NativeKickHlsLoader {
           url: context.url,
           data,
           code: response.status,
-          text: response.statusText ?? 'OK',
-        },
+          text: 'OK',
+        } satisfies LoaderResponse,
         this.stats,
         context,
-        response,
+        null,
       );
     } catch (error) {
       if (this.cancelled) {
@@ -419,22 +290,24 @@ class NativeKickHlsLoader {
 
       this.stats.loading.end = performance.now();
 
-      if (/timed out/i.test(error?.message ?? '')) {
-        callbacks.onTimeout(this.stats, context, error);
+      const message = error instanceof Error ? error.message : 'Unable to load Kick HLS data';
+
+      if (/timed out/i.test(message)) {
+        callbacks.onTimeout(this.stats, context, null);
         return;
       }
 
       callbacks.onError(
-        { code: 0, text: error?.message ?? 'Unable to load Kick HLS data' },
+        { code: 0, text: message },
         context,
-        error,
+        null,
         this.stats,
       );
     }
   }
 }
 
-function createHlsLoadStats() {
+function createHlsLoadStats(): LoaderStats {
   return {
     aborted: false,
     loaded: 0,
@@ -597,14 +470,6 @@ function createHeroSlides(latestVideos: LatestYoutubeVideo[]): HeroSlide[] {
     })),
   ];
 }
-
-type HlsVideoProps = {
-  src: string;
-  title: string;
-  autoPlay?: boolean;
-  maxHeight?: number;
-  onPlaybackError?: () => void;
-};
 
 function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackError }: HlsVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -850,17 +715,6 @@ function KickEmbedFrame() {
     />
   );
 }
-
-type KickPlaybackStatus = 'idle' | 'loading' | 'ready' | 'unavailable';
-
-type KickPlayerProps = {
-  playbackUrl: string;
-  status: KickPlaybackStatus;
-  isLive: boolean;
-  liveStatusKnown?: boolean;
-  allowIframeFallback?: boolean;
-  maxHeight?: number;
-};
 
 function KickPlayer({
   playbackUrl,
@@ -1162,7 +1016,7 @@ function App() {
 
   useEffect(() => {
     if (!isTelevision || !streamFullscreen || streamFullscreenMode !== 'overlay') {
-      return;
+      return undefined;
     }
 
     const focusTimer = window.setTimeout(() => {
