@@ -2242,10 +2242,9 @@ function App() {
               {supportCards.map((card) => {
                 const Component = card.view ? 'button' : 'a';
                 const Icon = card.icon;
-                const ArrowIcon = card.view ? ChevronRight : ExternalLink;
                 return (
                   <Component
-                    className={`support-card ${card.className}`}
+                    className={`links-drawer-card ${card.className}`}
                     href={card.view ? undefined : card.url}
                     target={card.view ? undefined : '_blank'}
                     rel={card.view ? undefined : 'noreferrer'}
@@ -2253,17 +2252,14 @@ function App() {
                     onClick={card.view === 'vods' ? openVods : handleExternalLinkClick(card.url)}
                     key={card.name}
                   >
-                    {card.image ? (
-                      <img className="support-card-icon" src={card.image} alt="" aria-hidden="true" />
-                    ) : (
-                      <Icon size={34} aria-hidden="true" />
-                    )}
-                    <div>
-                      <strong>{card.name}</strong>
-                      <span>{card.label}</span>
-                      <small>{card.detail}</small>
-                    </div>
-                    <ArrowIcon className="card-arrow" size={22} aria-hidden="true" />
+                    <span className="links-drawer-icon" aria-hidden="true">
+                      {card.image ? (
+                        <img src={card.image} alt="" />
+                      ) : (
+                        <Icon size={32} />
+                      )}
+                    </span>
+                    <strong>{card.name}</strong>
                   </Component>
                 );
               })}

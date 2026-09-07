@@ -2610,57 +2610,116 @@ h1 {
     gap: 14px 10px;
   }
 
-  .links-drawer-grid .support-card {
-    grid-template-rows: 62px 32px;
-    align-content: start;
+  .links-drawer-card {
+    display: grid;
+    grid-template-rows: 62px 34px;
+    justify-items: center;
     align-items: start;
-    min-height: 104px;
     gap: 8px;
+    min-width: 0;
+    min-height: 104px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
   }
 
-  .links-drawer-grid .support-card::before {
-    grid-row: 1;
-    grid-column: 1;
-    align-self: center;
-    justify-self: center;
+  .links-drawer-icon {
+    display: grid;
+    place-items: center;
     width: 58px;
     height: 58px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 10px 24px rgba(0, 0, 0, 0.32);
   }
 
-  .links-drawer-grid .support-card > svg,
-  .links-drawer-grid .support-card-icon {
-    grid-row: 1;
-    grid-column: 1;
-    align-self: center;
-    justify-self: center;
-  }
-
-  .links-drawer-grid .support-card > svg {
-    width: 30px;
-    height: 30px;
-  }
-
-  .links-drawer-grid .support-card-icon {
+  .links-drawer-icon img,
+  .links-drawer-icon svg {
+    display: block;
     width: 34px;
     height: 34px;
+    object-fit: contain;
   }
 
-  .links-drawer-grid .support-card.shop .support-card-icon {
-    width: 39px;
-    height: 39px;
+  .links-drawer-card.patreon .links-drawer-icon {
+    border-color: rgba(114, 255, 51, 0.28);
+    background: linear-gradient(135deg, #11371c, #06100a);
+  }
+
+  .links-drawer-card.shop .links-drawer-icon {
+    border-color: rgba(244, 191, 63, 0.5);
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(135deg, #5c4610, #151105);
+    background-size: 14px 14px, 14px 14px, auto;
+  }
+
+  .links-drawer-card.shop .links-drawer-icon img {
+    width: 40px;
+    height: 40px;
     padding: 6px;
+    border-radius: 7px;
+    background: rgba(42, 30, 5, 0.92);
+    filter: brightness(1.22) contrast(1.18);
   }
 
-  .links-drawer-grid .support-card strong {
-    grid-row: 2;
-    grid-column: 1;
+  .links-drawer-card.vods .links-drawer-icon {
+    border-color: rgba(114, 255, 51, 0.24);
+    background: linear-gradient(135deg, #1e2930, #080b0c);
+  }
+
+  .links-drawer-card.discord .links-drawer-icon {
+    border-color: rgba(88, 101, 242, 0.44);
+    background: linear-gradient(135deg, #5865f2, #151a48);
+  }
+
+  .links-drawer-card.reddit .links-drawer-icon {
+    border-color: rgba(255, 111, 50, 0.44);
+    background: linear-gradient(135deg, #ff6f32, #35140a);
+  }
+
+  .links-drawer-card.x-social .links-drawer-icon {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: linear-gradient(135deg, #242a31, #050607);
+  }
+
+  .links-drawer-card.x-social .links-drawer-icon img {
+    filter:
+      drop-shadow(1px 0 0 #ffffff)
+      drop-shadow(-1px 0 0 #ffffff)
+      drop-shadow(0 1px 0 #ffffff)
+      drop-shadow(0 -1px 0 #ffffff);
+  }
+
+  .links-drawer-card strong {
+    display: block;
     align-self: start;
-    max-width: 84px;
-    min-height: 28px;
+    width: 100%;
+    max-width: 92px;
+    min-height: 30px;
+    color: rgba(255, 255, 255, 0.82);
     font-size: 0.78rem;
+    font-weight: 760;
     line-height: 1.08;
-    text-align: center;
+  }
+
+  .links-drawer-card:hover,
+  .links-drawer-card:focus-visible {
+    color: #ffffff;
+    outline: none;
+  }
+
+  .links-drawer-card:focus-visible .links-drawer-icon {
+    outline: 2px solid #72ff33;
+    outline-offset: 3px;
   }
 
   .mobile-tabs {
