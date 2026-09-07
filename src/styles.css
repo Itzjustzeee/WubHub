@@ -2611,15 +2611,29 @@ h1 {
   }
 
   .links-drawer-grid .support-card {
-    grid-template-rows: 58px auto;
-    min-height: 98px;
-    gap: 9px;
+    grid-template-rows: 62px 32px;
+    align-content: start;
+    align-items: start;
+    min-height: 104px;
+    gap: 8px;
   }
 
   .links-drawer-grid .support-card::before {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+    justify-self: center;
     width: 58px;
     height: 58px;
     border-radius: 12px;
+  }
+
+  .links-drawer-grid .support-card > svg,
+  .links-drawer-grid .support-card-icon {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+    justify-self: center;
   }
 
   .links-drawer-grid .support-card > svg {
@@ -2639,9 +2653,14 @@ h1 {
   }
 
   .links-drawer-grid .support-card strong {
+    grid-row: 2;
+    grid-column: 1;
+    align-self: start;
     max-width: 84px;
+    min-height: 28px;
     font-size: 0.78rem;
     line-height: 1.08;
+    text-align: center;
   }
 
   .mobile-tabs {
