@@ -1,25 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Regarded Art">
   <defs>
-    <linearGradient id="canvas" x1="18" y1="18" x2="76" y2="78" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2a1338"/>
-      <stop offset=".55" stop-color="#1f0e29"/>
-      <stop offset="1" stop-color="#321647"/>
-    </linearGradient>
-    <linearGradient id="brush" x1="30" y1="66" x2="76" y2="20" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ff2e88"/>
-      <stop offset=".48" stop-color="#b069d4"/>
-      <stop offset="1" stop-color="#46e5d9"/>
-    </linearGradient>
-    <linearGradient id="paint" x1="20" y1="28" x2="80" y2="78" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#f3ead8"/>
-      <stop offset=".48" stop-color="#ff6fb0"/>
-      <stop offset="1" stop-color="#f7ab5a"/>
-    </linearGradient>
+    <radialGradient id="regarded-glow" cx="28%" cy="22%" r="78%">
+      <stop stop-color="#46e5d9"/>
+      <stop offset=".36" stop-color="#b069d4"/>
+      <stop offset=".68" stop-color="#ff2e88"/>
+      <stop offset="1" stop-color="#1f0e29"/>
+    </radialGradient>
   </defs>
-  <rect x="6" y="6" width="84" height="84" rx="20" fill="#1f0e29"/>
-  <path d="M28 21h40l6 42H22l6-42Z" fill="url(#canvas)" stroke="#ff4d9a" stroke-opacity=".55" stroke-width="3"/>
-  <path d="M34 63 24 82M62 63l10 19M48 63v20" stroke="#f3ead8" stroke-opacity=".9" stroke-width="5" stroke-linecap="round"/>
-  <path d="M34 32c6-7 17-7 26-1 7 5 9 14 4 21-4 5-11 6-15 1-3-4 1-7 4-8 4-2 6-7 2-10-5-4-14-3-18 2l-3-5Z" fill="url(#paint)"/>
-  <path d="M34 66 70 30l8-2-2 8-36 36-10 4 4-10Z" fill="url(#brush)"/>
-  <path d="m64 36 6 6" stroke="#f3ead8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="48" cy="48" r="40" fill="url(#regarded-glow)"/>
+  <circle cx="36" cy="30" r="10" fill="#f3ead8" opacity=".2"/>
 </svg>
