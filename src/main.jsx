@@ -1768,6 +1768,13 @@ function App() {
           <button className="mobile-brand" type="button" onClick={goHome}>
             <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
           </button>
+          {view === 'stream' && (
+            <img
+              className={`mobile-stream-header-logo ${activePlayer.className}`}
+              src={activePlayer.logo}
+              alt={activePlayer.name}
+            />
+          )}
           <button
             className="icon-button notification-button"
             type="button"

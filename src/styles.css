@@ -563,6 +563,10 @@ button {
   height: auto;
 }
 
+.mobile-stream-header-logo {
+  display: none;
+}
+
 .mobile-menu {
   display: none;
 }
@@ -1934,18 +1938,20 @@ h1 {
   .content {
     position: relative;
     z-index: 1;
-    padding: 10px 0 22px;
+    padding: 0 0 22px;
   }
 
   .topbar {
     position: sticky;
     top: 0;
     z-index: 7;
+    align-items: center;
     justify-content: space-between;
-    min-height: 50px;
+    min-height: calc(50px + env(safe-area-inset-top));
     margin: 0;
-    padding: 0 8px 8px;
-    background: linear-gradient(180deg, #070b11 72%, rgba(7, 11, 17, 0));
+    padding: env(safe-area-inset-top) 8px 6px;
+    background: #070b11;
+    box-shadow: 0 1px 0 rgba(120, 255, 47, 0.08);
   }
 
   .icon-button {
@@ -1959,7 +1965,25 @@ h1 {
 
   .mobile-brand {
     display: inline-block;
+    flex: 0 0 54px;
     padding: 0;
+  }
+
+  .mobile-stream-header-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    width: auto;
+    height: 25px;
+    max-width: 34vw;
+    object-fit: contain;
+    transform: translate(-50%, -50%);
+  }
+
+  .mobile-stream-header-logo.twitch {
+    height: 31px;
+    max-width: 38vw;
   }
 
   .mobile-menu {
@@ -2339,6 +2363,7 @@ h1 {
   .stream-page {
     --stream-video-width: 100%;
     --stream-video-height: auto;
+    gap: 12px;
     padding-bottom: 4px;
   }
 
@@ -2347,9 +2372,7 @@ h1 {
   }
 
   .stream-page-header {
-    align-items: center;
-    flex-direction: column;
-    text-align: center;
+    display: none;
   }
 
   .stream-content-layout {

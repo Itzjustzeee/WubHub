@@ -6,11 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.Message;
+import android.view.View;
 import android.view.Window;
+import android.view.WindowInsetsController;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
@@ -32,9 +35,35 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(NativeChatAuthPlugin.class);
         registerPlugin(NativePlatformPlugin.class);
         super.onCreate(savedInstanceState);
+        configureSystemBars();
         configureEmbeddedAuthCookies();
         configureEmbeddedAuthPopups();
         configureKickHlsProxy();
+    }
+
+    private void configureSystemBars() {
+        Window window = getWindow();
+        window.setStatusBarColor(Color.BLACK);
+        window.setNavigationBarColor(Color.BLACK);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int flags = window.getDecorView().getSystemUiVisibility();
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            window.getDecorView().setSystemUiVisibility(flags);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = window.getInsetsController();
+
+            if (controller != null) {
+                controller.setSystemBarsAppearance(
+                    0,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                );
+            }
+        }
     }
 
     private void configureEmbeddedAuthCookies() {
