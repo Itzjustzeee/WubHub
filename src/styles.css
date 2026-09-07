@@ -125,6 +125,8 @@ button {
   position: sticky;
   top: 0;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   padding: 28px 18px;
   border-right: 1px solid rgba(255, 255, 255, 0.09);
@@ -150,7 +152,7 @@ button {
 
 .nav-list {
   display: grid;
-  gap: 24px;
+  gap: 6px;
 }
 
 .nav-group {
@@ -842,6 +844,70 @@ button {
   text-transform: uppercase;
 }
 
+.sidebar-more-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(120, 255, 47, 0.12);
+}
+
+.sidebar-more-actions button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sidebar-more-actions button > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(120, 255, 47, 0.34);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(120, 255, 47, 0.2), transparent 3rem),
+    linear-gradient(135deg, rgba(25, 63, 32, 0.92), rgba(8, 16, 10, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.34);
+}
+
+.sidebar-more-actions svg {
+  color: #72ff33;
+  filter: drop-shadow(0 0 10px rgba(120, 255, 47, 0.34));
+}
+
+.sidebar-more-actions strong {
+  max-width: 64px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.08;
+}
+
+.sidebar-more-actions button:hover strong,
+.sidebar-more-actions button:focus-visible strong {
+  color: #ffffff;
+}
+
+.sidebar-more-actions button:focus-visible {
+  outline: none;
+}
+
+.sidebar-more-actions button:focus-visible > span {
+  outline: 2px solid #72ff33;
+  outline-offset: 3px;
+}
+
 .hero-slide-eyebrow svg {
   color: #ff2f2f;
 }
@@ -1102,7 +1168,20 @@ h1 {
 }
 
 .support-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 20px 19px;
+  border: 1px solid rgba(160, 172, 190, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(21, 28, 38, 0.56), rgba(8, 12, 18, 0.62)),
+    rgba(6, 10, 15, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 36px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
 }
 
 .mobile-links-button,
@@ -2014,11 +2093,107 @@ h1 {
     linear-gradient(135deg, #1e2930, #080b0c);
 }
 
+.support-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 66px auto;
+  justify-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+
+.support-card::before {
+  position: relative;
+  inset: auto;
+  width: 66px;
+  height: 66px;
+  border-radius: 14px;
+  transform: none;
+  grid-row: 1;
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
+.support-card > svg,
+.support-card-icon {
+  position: relative;
+  z-index: 1;
+  grid-row: 1;
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
+  margin-top: 0;
+}
+
+.support-card > svg {
+  width: 32px;
+  height: 32px;
+}
+
+.support-card-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.support-card.shop .support-card-icon {
+  width: 44px;
+  height: 44px;
+  padding: 7px;
+  border-radius: 8px;
+  background: rgba(42, 30, 5, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(255, 213, 91, 0.4),
+    0 8px 18px rgba(0, 0, 0, 0.42);
+  filter:
+    drop-shadow(0 0 8px rgba(255, 213, 91, 0.34))
+    brightness(1.22)
+    contrast(1.18);
+}
+
+.support-card > div {
+  display: contents;
+}
+
+.support-card span,
+.support-card small,
+.support-card .card-arrow {
+  display: none;
+}
+
+.support-card:hover {
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
 .support-card strong,
 .youtube-card strong {
   display: block;
   font-size: clamp(1.6rem, 3vw, 2.1rem);
   line-height: 1;
+}
+
+.support-card strong {
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: center;
+  max-width: 108px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.88rem;
+  font-weight: 760;
+  line-height: 1.08;
+  text-transform: none;
 }
 
 .youtube-card {
@@ -2140,6 +2315,10 @@ h1 {
   }
 
   .sidebar {
+    display: none;
+  }
+
+  .sidebar-more-actions {
     display: none;
   }
 
@@ -3213,7 +3392,7 @@ html.android-tv .app-shell {
 html.android-tv .sidebar {
   position: sticky;
   top: 0;
-  display: block;
+  display: flex;
   height: var(--tv-layout-height, 1440px);
   padding: 24px 14px;
 }
@@ -3227,7 +3406,7 @@ html.android-tv .brand img {
 }
 
 html.android-tv .nav-list {
-  gap: 20px;
+  gap: 5px;
 }
 
 html.android-tv .nav-group {
@@ -3235,8 +3414,7 @@ html.android-tv .nav-group {
 }
 
 html.android-tv .nav-group p {
-  padding: 0 8px;
-  font-size: 0.64rem;
+  display: none;
 }
 
 html.android-tv .nav-item {
@@ -3250,6 +3428,22 @@ html.android-tv .nav-item {
 html.android-tv .nav-item svg {
   width: 17px;
   height: 17px;
+}
+
+html.android-tv .sidebar-more-actions {
+  gap: 6px;
+  padding-top: 16px;
+}
+
+html.android-tv .sidebar-more-actions button > span {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+html.android-tv .sidebar-more-actions strong {
+  max-width: 58px;
+  font-size: 0.6rem;
 }
 
 html.android-tv .nav-live {
@@ -3528,72 +3722,60 @@ html.android-tv .stream-fullscreen-exit {
 
 html.android-tv .support-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  justify-items: center;
+  gap: 14px;
   overflow: visible;
-  width: auto;
-  padding-bottom: 0;
+  width: 100%;
+  padding: 20px 24px 21px;
 }
 
 html.android-tv .support-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: auto;
-  justify-items: stretch;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  grid-template-rows: 72px auto;
+  justify-items: center;
+  gap: 10px;
   flex: initial;
-  width: auto;
+  width: 100%;
   min-width: 0;
-  min-height: 158px;
-  padding: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
-  text-align: left;
+  min-height: 114px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
 }
 
 html.android-tv .support-card::before {
-  position: absolute;
-  inset: 0;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  grid-row: auto;
-  grid-column: auto;
+  position: relative;
+  inset: auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 15px;
+  grid-row: 1;
+  grid-column: 1;
 }
 
 html.android-tv .support-card > div {
-  display: grid;
+  display: contents;
 }
 
 html.android-tv .support-card strong {
-  grid-row: auto;
-  grid-column: auto;
-  justify-self: auto;
-  max-width: none;
-  color: #ffffff;
-  font-size: 1.4rem;
-  line-height: 1;
-  font-weight: 900;
-  text-align: left;
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: center;
+  max-width: 118px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.96rem;
+  line-height: 1.08;
+  font-weight: 760;
+  text-align: center;
 }
 
 html.android-tv .support-card span,
 html.android-tv .support-card small,
 html.android-tv .support-card .card-arrow {
-  display: block;
-}
-
-html.android-tv .support-card span {
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 850;
-}
-
-html.android-tv .support-card small {
-  color: rgba(255, 255, 255, 0.74);
-  font-size: 0.78rem;
-  font-weight: 750;
-  line-height: 1.22;
+  display: none;
 }

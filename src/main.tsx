@@ -2012,13 +2012,23 @@ function App() {
           <img src="/assets/WubHub2-transparent.png" alt="WubHub" />
         </button>
         <nav className="nav-list">
-          {navGroups.map((group) => (
-            <div className="nav-group" key={group.label}>
-              <p>{group.label}</p>
-              {group.items.map(renderNavItem)}
-            </div>
-          ))}
+          {navGroups
+            .find((group) => group.label === 'Watch')
+            ?.items.map(renderNavItem)}
         </nav>
+        <div className="sidebar-more-actions" aria-label="Sidebar actions">
+          {mobileMoreActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button type="button" key={action.id}>
+                <span>
+                  <Icon size={25} aria-hidden="true" />
+                </span>
+                <strong>{action.label}</strong>
+              </button>
+            );
+          })}
+        </div>
       </aside>
 
       <section id="home" className={`content ${viewTransition}`}>
