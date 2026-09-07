@@ -800,6 +800,7 @@ function App() {
   const [view, setView] = useState('home');
   const [isTelevision, setIsTelevision] = useState(false);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+  const [linksDrawerOpen, setLinksDrawerOpen] = useState(false);
   const [latestYoutubeVideos, setLatestYoutubeVideos] = useState(fallbackLatestVideos);
   const [selectedStream, setSelectedStream] = useState(mediaPlayers[0].id);
   const [streamFullscreen, setStreamFullscreen] = useState(false);
@@ -830,6 +831,7 @@ function App() {
   const streamFullscreenModeRef = useRef(streamFullscreenMode);
   const viewRef = useRef(view);
   const mobileMenuOpenRef = useRef(mobileMenuOpen);
+  const linksDrawerOpenRef = useRef(linksDrawerOpen);
   const notificationDrawerOpenRef = useRef(notificationDrawerOpen);
   const heroSwipeStartRef = useRef(null);
   const heroSwipeMovedRef = useRef(false);
@@ -935,6 +937,10 @@ function App() {
   useEffect(() => {
     mobileMenuOpenRef.current = mobileMenuOpen;
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    linksDrawerOpenRef.current = linksDrawerOpen;
+  }, [linksDrawerOpen]);
 
   useEffect(() => {
     notificationDrawerOpenRef.current = notificationDrawerOpen;
@@ -1269,6 +1275,11 @@ function App() {
           return;
         }
 
+        if (linksDrawerOpenRef.current) {
+          setLinksDrawerOpen(false);
+          return;
+        }
+
         if (viewRef.current !== 'home') {
           goHome();
           return;
@@ -1301,17 +1312,20 @@ function App() {
     setStreamFrameSrc(mediaPlayers.find((player) => player.id === streamId)?.src ?? mediaPlayers[0].src);
     setView('stream');
     setMobileMenuOpen(false);
+    setLinksDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function goHome() {
     setView('home');
     setMobileMenuOpen(false);
+    setLinksDrawerOpen(false);
   }
 
   async function openVods() {
     setView('vods');
     setMobileMenuOpen(false);
+    setLinksDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     await launchVodsArchive();
@@ -1348,6 +1362,7 @@ function App() {
   function handleExternalLinkClick(url) {
     return (event) => {
       event.preventDefault();
+      setLinksDrawerOpen(false);
       openExternalLink(url);
     };
   }
@@ -1366,6 +1381,7 @@ function App() {
     if (target === 'more') {
       setView('home');
       setMobileMenuOpen(true);
+      setLinksDrawerOpen(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -2167,6 +2183,14 @@ function App() {
         {view === 'home' && (
           <section className="section-block" aria-labelledby="support">
             <h2 id="support" className="sr-only">Community and support links</h2>
+            <button
+              className="mobile-links-button"
+              type="button"
+              onClick={() => setLinksDrawerOpen(true)}
+            >
+              <Ellipsis size={24} aria-hidden="true" />
+              <span>More Links</span>
+            </button>
             <div className="support-grid">
               {supportCards.map((card) => {
                 const Component = card.view ? 'button' : 'a';
@@ -2200,6 +2224,53 @@ function App() {
           </section>
         )}
       </section>
+
+      {linksDrawerOpen && (
+        <div className="links-drawer-backdrop" role="presentation" onClick={() => setLinksDrawerOpen(false)}>
+          <aside
+            className="links-drawer"
+            aria-label="More links"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="links-drawer-header">
+              <strong>More Links</strong>
+              <button type="button" onClick={() => setLinksDrawerOpen(false)} aria-label="Close links">
+                <X size={19} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="links-drawer-grid">
+              {supportCards.map((card) => {
+                const Component = card.view ? 'button' : 'a';
+                const Icon = card.icon;
+                const ArrowIcon = card.view ? ChevronRight : ExternalLink;
+                return (
+                  <Component
+                    className={`support-card ${card.className}`}
+                    href={card.view ? undefined : card.url}
+                    target={card.view ? undefined : '_blank'}
+                    rel={card.view ? undefined : 'noreferrer'}
+                    type={card.view ? 'button' : undefined}
+                    onClick={card.view === 'vods' ? openVods : handleExternalLinkClick(card.url)}
+                    key={card.name}
+                  >
+                    {card.image ? (
+                      <img className="support-card-icon" src={card.image} alt="" aria-hidden="true" />
+                    ) : (
+                      <Icon size={34} aria-hidden="true" />
+                    )}
+                    <div>
+                      <strong>{card.name}</strong>
+                      <span>{card.label}</span>
+                      <small>{card.detail}</small>
+                    </div>
+                    <ArrowIcon className="card-arrow" size={22} aria-hidden="true" />
+                  </Component>
+                );
+              })}
+            </div>
+          </aside>
+        </div>
+      )}
 
       <nav className="mobile-tabs" aria-label="Mobile primary">
         <button className={view === 'home' ? 'active' : ''} type="button" onClick={goHome}>
