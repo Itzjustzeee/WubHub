@@ -13,7 +13,7 @@ type ViteDevServerLike = {
 
 function kickHlsProxy() {
   async function handleKickHlsProxy(req: IncomingMessage, res: ServerResponse) {
-    const requestUrl = new URL(req.url, 'http://localhost');
+    const requestUrl = new URL(req.url ?? '/', 'http://localhost');
     const targetUrl = requestUrl.searchParams.get('url');
 
     if (!targetUrl || !/^https:\/\/[^/]+\.live-video\.net\//i.test(targetUrl)) {

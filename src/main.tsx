@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core';
-import type { HttpResponse, HttpResponseType } from '@capacitor/core';
+import type { HttpResponse, HttpResponseType, PluginListenerHandle } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import Hls from 'hls.js';
 import type {
@@ -33,11 +33,19 @@ import {
   Video,
   X,
 } from 'lucide-react';
+import {
+  getKickLiveStatus,
+  getKickPlaybackExpiryMs,
+  getKickPlaybackUrl,
+  getPlayableKickPlaybackUrl,
+} from './api/kick';
+import { formatViewerCount } from './api/shared';
+import { getTwitchLiveStatus } from './api/twitch';
+import { getLatestYoutubeVideo } from './api/youtube';
 import type {
   HeroSlide,
   HlsLevel,
   HlsVideoProps,
-  JsonRecord,
   KickPlayerProps,
   KickPlaybackStatus,
   LatestYoutubeVideo,
@@ -59,7 +67,6 @@ import type {
   StreamFullscreenMode,
   StreamId,
   SupportCard,
-  TwitchGraphqlResponse,
   ViewName,
   WubHubNotification,
   YoutubeChannel,
@@ -92,7 +99,6 @@ const links: Record<LinkKey, string> = {
 };
 
 const twitchParent = window.location.hostname || 'localhost';
-const twitchGraphqlClientId = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 const streamChats: Record<StreamId, string> = {
   kick: 'https://chat.kick.cx/embed/paymoneywubby',
   twitch: `https://www.twitch.tv/embed/paymoneywubby/chat?parent=${encodeURIComponent(twitchParent)}&darkpopout`,
@@ -481,6 +487,8 @@ function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackErr
       return undefined;
     }
 
+    const currentVideo = video;
+
     async function lockVideoLandscape() {
       try {
         if (Capacitor.isNativePlatform()) {
@@ -508,23 +516,23 @@ function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackErr
     }
 
     function handleFullscreenChange() {
-      const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+      const fullscreenElement = document.fullscreenElement ?? document.webkitFullscreenElement ?? null;
 
-      if (fullscreenElement === video || video.contains(fullscreenElement)) {
+      if (fullscreenElement === currentVideo || currentVideo.contains(fullscreenElement)) {
         lockVideoLandscape();
       } else if (!fullscreenElement) {
         restoreVideoPortrait();
       }
     }
 
-    video.addEventListener('webkitbeginfullscreen', lockVideoLandscape);
-    video.addEventListener('webkitendfullscreen', restoreVideoPortrait);
+    currentVideo.addEventListener('webkitbeginfullscreen', lockVideoLandscape);
+    currentVideo.addEventListener('webkitendfullscreen', restoreVideoPortrait);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     return () => {
-      video.removeEventListener('webkitbeginfullscreen', lockVideoLandscape);
-      video.removeEventListener('webkitendfullscreen', restoreVideoPortrait);
+      currentVideo.removeEventListener('webkitbeginfullscreen', lockVideoLandscape);
+      currentVideo.removeEventListener('webkitendfullscreen', restoreVideoPortrait);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
@@ -592,7 +600,7 @@ function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackErr
     let previousBufferSeconds = 0;
     let lowBufferTicks = 0;
 
-    function setTargetLevel(levelIndex, immediate = false) {
+    function setTargetLevel(levelIndex: number) {
       if (levelIndex < 0) {
         return;
       }
@@ -635,7 +643,7 @@ function HlsVideo({ src, title, autoPlay = false, maxHeight = 720, onPlaybackErr
         const nextLowerLevelIndex = getAdjacentHlsLevelIndex(hls.levels, targetLevelIndex, -1);
 
         if (nextLowerLevelIndex >= 0 && nextLowerLevelIndex !== targetLevelIndex) {
-          setTargetLevel(nextLowerLevelIndex, true);
+          setTargetLevel(nextLowerLevelIndex);
         }
 
         lowBufferTicks = 0;
@@ -1276,13 +1284,17 @@ function App() {
   useEffect(() => {
     if (!streamFullscreen) {
       setStreamControlsVisible(true);
-      window.clearTimeout(streamControlsTimerRef.current);
+      if (streamControlsTimerRef.current !== null) {
+        window.clearTimeout(streamControlsTimerRef.current);
+      }
       return undefined;
     }
 
     function showStreamControls() {
       setStreamControlsVisible(true);
-      window.clearTimeout(streamControlsTimerRef.current);
+      if (streamControlsTimerRef.current !== null) {
+        window.clearTimeout(streamControlsTimerRef.current);
+      }
       streamControlsTimerRef.current = window.setTimeout(() => {
         setStreamControlsVisible(false);
       }, 2200);
@@ -1292,7 +1304,7 @@ function App() {
       exitStreamFullscreen(false);
     }
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event: KeyboardEvent) {
       showStreamControls();
 
       if (event.key === 'Escape') {
@@ -1311,7 +1323,9 @@ function App() {
     window.addEventListener('wheel', showStreamControls);
 
     return () => {
-      window.clearTimeout(streamControlsTimerRef.current);
+      if (streamControlsTimerRef.current !== null) {
+        window.clearTimeout(streamControlsTimerRef.current);
+      }
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('mousemove', showStreamControls);
@@ -1378,8 +1392,8 @@ function App() {
       return undefined;
     }
 
-    let listener;
-    let appStateListener;
+    let listener: PluginListenerHandle | undefined;
+    let appStateListener: PluginListenerHandle | undefined;
 
     async function attachBackHandler() {
       listener = await CapacitorApp.addListener('backButton', async () => {
@@ -2556,487 +2570,6 @@ function App() {
       </nav>
     </main>
   );
-}
-
-async function getKickLiveStatus(): Promise<LiveStatusDetails> {
-  const data = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby');
-  const livestream = readPath(data, ['livestream']);
-  const isLive = Boolean(readPath(data, ['livestream', 'is_live']) ?? livestream);
-  let title = extractKickStreamTitle(data);
-  let category = extractKickStreamCategory(data);
-  let viewers = extractKickViewerCount(data);
-
-  if (isLive && (!title || !category || viewers === null)) {
-    try {
-      const livestreamData = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby/livestream');
-      title = extractKickStreamTitle(livestreamData);
-      category = category || extractKickStreamCategory(livestreamData);
-      viewers = viewers ?? extractKickViewerCount(livestreamData);
-    } catch {
-      // The channel response is enough for live status if the title endpoint is unavailable.
-    }
-  }
-
-  return { isLive, title, category, viewers };
-}
-
-async function getKickPlaybackUrl(): Promise<string> {
-  const playbackResponse = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby/playback-url');
-  const directUrl = extractKickPlaybackUrl(playbackResponse);
-
-  if (directUrl) {
-    return directUrl;
-  }
-
-  const channelResponse = await requestKickJson('https://kick.com/api/v2/channels/paymoneywubby');
-  return extractKickPlaybackUrl(channelResponse);
-}
-
-async function requestKickJson(url: string): Promise<unknown> {
-  const headers = {
-    Accept: 'application/json, text/plain, */*',
-    'X-Requested-With': 'XMLHttpRequest',
-  };
-
-  if (Capacitor.isNativePlatform()) {
-    const response = await CapacitorHttp.get({
-      url,
-      headers,
-      params: { _: String(Date.now()) },
-    });
-
-    if (response.status >= 200 && response.status < 300 && response.data) {
-      return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    }
-
-    throw new Error('Unable to load Kick response');
-  }
-
-  try {
-    const response = await fetch(url, {
-      cache: 'no-store',
-      headers,
-    });
-
-    if (response.ok) {
-      return response.json();
-    }
-  } catch {
-    // Browser preview can be blocked by CORS; the proxy keeps local preview usable.
-  }
-
-  const proxyResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, {
-    cache: 'no-store',
-  });
-
-  if (!proxyResponse.ok) {
-    throw new Error('Unable to load Kick response');
-  }
-
-  return proxyResponse.json();
-}
-
-function asRecord(value: unknown): JsonRecord {
-  return value && typeof value === 'object' ? value as JsonRecord : {};
-}
-
-function readPath(payload: unknown, path: string[]): unknown {
-  return path.reduce<unknown>((current, key) => asRecord(current)[key], payload);
-}
-
-function extractStringCandidate(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function extractKickPlaybackUrl(payload: unknown): string {
-  if (typeof payload === 'string') {
-    return payload.includes('.m3u8') ? payload : '';
-  }
-
-  const candidates = [
-    readPath(payload, ['data']),
-    readPath(payload, ['playback_url']),
-    readPath(payload, ['livestream', 'playback_url']),
-    readPath(payload, ['streamer_channel', 'playback_url']),
-    readPath(payload, ['user', 'streamer_channel', 'playback_url']),
-  ];
-
-  const playbackUrl = candidates
-    .map(extractStringCandidate)
-    .find((candidate) => candidate.includes('.m3u8'));
-  return playbackUrl ?? '';
-}
-
-function extractKickStreamTitle(payload: unknown): string {
-  const candidates = [
-    readPath(payload, ['session_title']),
-    readPath(payload, ['title']),
-    readPath(payload, ['livestream', 'session_title']),
-    readPath(payload, ['livestream', 'title']),
-    readPath(payload, ['recent_livestream', 'session_title']),
-    readPath(payload, ['recent_livestream', 'title']),
-    readPath(payload, ['data', 'session_title']),
-    readPath(payload, ['data', 'title']),
-    readPath(payload, ['data', 'livestream', 'session_title']),
-    readPath(payload, ['data', 'livestream', 'title']),
-  ];
-
-  return candidates.map(extractStringCandidate).find(Boolean) ?? '';
-}
-
-function extractKickStreamCategory(payload: unknown): string {
-  const categories = [
-    readPath(payload, ['livestream', 'category']),
-    readPath(payload, ['livestream', 'categories', '0']),
-    readPath(payload, ['category']),
-    readPath(payload, ['categories', '0']),
-    readPath(payload, ['data', 'livestream', 'category']),
-    readPath(payload, ['data', 'livestream', 'categories', '0']),
-    readPath(payload, ['data', 'category']),
-    readPath(payload, ['data', 'categories', '0']),
-  ];
-
-  const category = categories
-    .map((candidate) => {
-      if (typeof candidate === 'string') {
-        return candidate;
-      }
-
-      const record = asRecord(candidate);
-      return extractStringCandidate(record.name ?? record.title ?? record.slug);
-    })
-    .find((candidate) => typeof candidate === 'string' && candidate.trim());
-
-  return category?.trim() ?? '';
-}
-
-function extractKickViewerCount(payload: unknown): number | null {
-  const candidates = [
-    readPath(payload, ['livestream', 'viewer_count']),
-    readPath(payload, ['livestream', 'viewers_count']),
-    readPath(payload, ['livestream', 'viewers']),
-    readPath(payload, ['viewer_count']),
-    readPath(payload, ['viewers_count']),
-    readPath(payload, ['viewers']),
-    readPath(payload, ['data', 'livestream', 'viewer_count']),
-    readPath(payload, ['data', 'livestream', 'viewers_count']),
-    readPath(payload, ['data', 'livestream', 'viewers']),
-    readPath(payload, ['data', 'viewer_count']),
-    readPath(payload, ['data', 'viewers_count']),
-    readPath(payload, ['data', 'viewers']),
-  ];
-
-  return normalizeViewerCount(candidates.find((candidate) => candidate !== undefined && candidate !== null));
-}
-
-function getPlayableKickPlaybackUrl(playbackUrl: string): string {
-  if (Capacitor.getPlatform() === 'ios') {
-    return playbackUrl;
-  }
-
-  return `/kick-hls?url=${encodeURIComponent(playbackUrl)}`;
-}
-
-function getKickPlaybackExpiryMs(playbackUrl: string): number {
-  try {
-    const token = new URL(playbackUrl).searchParams.get('token');
-    const payload = token?.split('.')[1];
-
-    if (!payload) {
-      return 0;
-    }
-
-    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const paddedPayload = normalizedPayload.padEnd(
-      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      '=',
-    );
-    const parsedPayload = JSON.parse(atob(paddedPayload));
-
-    return typeof parsedPayload.exp === 'number' ? parsedPayload.exp * 1000 : 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function getTwitchLiveStatus(): Promise<LiveStatusDetails> {
-  try {
-    const graphStatus = await getTwitchGraphqlLiveStatus();
-    if (graphStatus) {
-      return graphStatus;
-    }
-  } catch {
-    // DecAPI is kept as a fallback because Twitch can change its public GraphQL surface.
-  }
-
-  const response = await fetch('https://decapi.me/twitch/uptime/paymoneywubby?offline_msg=offline', {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error('Unable to load Twitch status');
-  }
-
-  const text = (await response.text()).trim();
-  const isLive = !/^offline$/i.test(text) && !/offline|not live|does not exist/i.test(text);
-
-  if (!isLive) {
-    return { isLive, title: '', category: '', viewers: null };
-  }
-
-  let title = '';
-  let category = '';
-  let viewers = null;
-
-  try {
-    const titleResponse = await fetch('https://decapi.me/twitch/title/paymoneywubby', {
-      cache: 'no-store',
-    });
-
-    if (titleResponse.ok) {
-      title = (await titleResponse.text()).trim();
-    }
-  } catch {
-    // Live status still works if the title lookup fails.
-  }
-
-  try {
-    const categoryResponse = await fetch('https://decapi.me/twitch/game/paymoneywubby', {
-      cache: 'no-store',
-    });
-
-    if (categoryResponse.ok) {
-      category = (await categoryResponse.text()).trim();
-    }
-  } catch {
-    // Category is optional UI detail.
-  }
-
-  try {
-    const viewerResponse = await fetch('https://decapi.me/twitch/viewercount/paymoneywubby', {
-      cache: 'no-store',
-    });
-
-    if (viewerResponse.ok) {
-      viewers = normalizeViewerCount(await viewerResponse.text());
-    }
-  } catch {
-    // Viewer count is optional UI detail.
-  }
-
-  return { isLive, title, category, viewers };
-}
-
-async function getTwitchGraphqlLiveStatus(): Promise<LiveStatusDetails | null> {
-  const payload = {
-    operationName: 'WubHubChannelLiveStatus',
-    variables: { login: 'paymoneywubby' },
-    query: `
-      query WubHubChannelLiveStatus($login: String!) {
-        user(login: $login) {
-          id
-          login
-          stream {
-            id
-            title
-            type
-            createdAt
-            viewersCount
-            game {
-              name
-            }
-          }
-        }
-      }
-    `,
-  };
-  let data;
-
-  if (Capacitor.isNativePlatform()) {
-    const response = await CapacitorHttp.post({
-      url: 'https://gql.twitch.tv/gql',
-      headers: {
-        'Client-ID': twitchGraphqlClientId,
-        'Content-Type': 'application/json',
-      },
-      data: payload,
-    });
-
-    if (response.status < 200 || response.status >= 300 || !response.data) {
-      throw new Error('Unable to load Twitch GraphQL status');
-    }
-
-    data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-  } else {
-    const response = await fetch('https://gql.twitch.tv/gql', {
-      method: 'POST',
-      cache: 'no-store',
-      headers: {
-        'Client-ID': twitchGraphqlClientId,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error('Unable to load Twitch GraphQL status');
-    }
-
-    data = await response.json();
-  }
-
-  const user = Array.isArray(data) ? data[0]?.data?.user : data?.data?.user;
-  if (!user) {
-    return null;
-  }
-
-  const stream = user.stream;
-  if (!stream) {
-    return { isLive: false, title: '', category: '', viewers: null };
-  }
-
-  return {
-    isLive: true,
-    title: typeof stream.title === 'string' ? stream.title.trim() : '',
-    category: typeof stream.game?.name === 'string' ? stream.game.name.trim() : '',
-    viewers: normalizeViewerCount(stream.viewersCount),
-  };
-}
-
-function normalizeViewerCount(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return Math.max(0, Math.round(value));
-  }
-
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed || /offline|not live|does not exist/i.test(trimmed)) {
-    return null;
-  }
-
-  const compactMatch = trimmed.match(/([\d,.]+)\s*([kmb])?/i);
-  if (!compactMatch) {
-    return null;
-  }
-
-  const numeric = Number(compactMatch[1].replace(/,/g, ''));
-  if (!Number.isFinite(numeric)) {
-    return null;
-  }
-
-  const multiplier = {
-    k: 1000,
-    m: 1000000,
-    b: 1000000000,
-  }[compactMatch[2]?.toLowerCase()] ?? 1;
-
-  return Math.max(0, Math.round(numeric * multiplier));
-}
-
-function formatViewerCount(value: unknown): string {
-  const count = normalizeViewerCount(value);
-
-  if (count === null) {
-    return '';
-  }
-
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(count >= 10000000 ? 0 : 1)}M`;
-  }
-
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}K`;
-  }
-
-  return count.toLocaleString();
-}
-
-async function getLatestYoutubeVideo(channel: YoutubeChannel, fallback: LatestYoutubeVideo): Promise<LatestYoutubeVideo> {
-  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
-
-  try {
-    const feedXml = await fetchYoutubeFeed(feedUrl);
-    return parseLatestYoutubeVideo(feedXml, channel, fallback);
-  } catch {
-    return fallback;
-  }
-}
-
-async function fetchYoutubeFeed(feedUrl: string): Promise<string> {
-  if (Capacitor.isNativePlatform()) {
-    const response = await CapacitorHttp.get({ url: feedUrl });
-
-    if (response.status >= 200 && response.status < 300 && response.data) {
-      return typeof response.data === 'string' ? response.data : String(response.data);
-    }
-
-    throw new Error('Unable to load YouTube feed');
-  }
-
-  try {
-    const response = await fetch(feedUrl, { cache: 'no-store' });
-
-    if (response.ok) {
-      return response.text();
-    }
-  } catch {
-    // YouTube RSS often blocks browser preview through CORS.
-  }
-
-  const proxyResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`, {
-    cache: 'no-store',
-  });
-
-  if (!proxyResponse.ok) {
-    throw new Error('Unable to load YouTube feed');
-  }
-
-  return proxyResponse.text();
-}
-
-function parseLatestYoutubeVideo(
-  feedXml: string,
-  channel: YoutubeChannel,
-  fallback: LatestYoutubeVideo,
-): LatestYoutubeVideo {
-  const document = new DOMParser().parseFromString(feedXml, 'application/xml');
-  const entries = Array.from(document.querySelectorAll('entry'));
-
-  if (entries.length === 0 || document.querySelector('parsererror')) {
-    return fallback;
-  }
-
-  const entry = entries.find((feedEntry) => !isYoutubeShortEntry(feedEntry));
-
-  if (!entry) {
-    return fallback;
-  }
-
-  const videoId = entry.getElementsByTagName('yt:videoId')[0]?.textContent?.trim();
-  const title = entry.querySelector('title')?.textContent?.trim();
-  const url = entry.querySelector('link[rel="alternate"]')?.getAttribute('href');
-  const thumbnail = entry.getElementsByTagName('media:thumbnail')[0]?.getAttribute('url');
-
-  if (!videoId || !title || !url || !thumbnail) {
-    return fallback;
-  }
-
-  return {
-    channelName: channel.name,
-    title,
-    url,
-    image: thumbnail,
-    channelImage: channel.image,
-    className: channel.className,
-  };
-}
-
-function isYoutubeShortEntry(entry: Element): boolean {
-  const url = entry.querySelector('link[rel="alternate"]')?.getAttribute('href') ?? '';
-  return /youtube\.com\/shorts\//i.test(url);
 }
 
 function readStoredJson<T>(key: string, fallback: T): T {
