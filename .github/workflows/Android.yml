@@ -1,25 +1,52 @@
-name: Android CI/CD
+name: Build Vite React Android APK
 on:
   push:
     branches: [ main ] # Change to master if your default branch is master
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout Source
       uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18 # Required for modern Vite/Capacitor pipelines
+        cache: 'npm'
+
+    - name: Install Frontend Dependencies
+      run: npm install
+
+    - name: Build Vite React App
+      run: npm run build # Generates the standard 'dist/' folder
+
+    - name: Initialize Capacitor Android Folder
+      run: |
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+        npx cap init "My App" "com.example.myapp" --web-dir=dist
+        npx cap add android
+        npx cap sync android
+
     - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '17' # Required by Capacitor for Android compilation
         cache: gradle
-    - name: Grant Permission
-      run: chmod +x gradlew
+
+    - name: Grant Gradle Permissions
+      run: chmod +x android/gradlew # Fixed path: looks inside the newly built android folder
+
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
-    - name: Upload APK
+      run: |
+        cd android
+        ./gradlew assembleDebug
+
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: my-android-app
-        path: app/build/outputs/apk/debug/*.apk
+        name: capacitor-android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
