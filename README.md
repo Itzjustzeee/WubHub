@@ -18,7 +18,7 @@ WubHub is a community stream hub for PaymoneyWubby viewers, built with React, Vi
 ### Mobile
 
 <p align="center">
-  <img src="docs/preview-mobile.jpg" alt="WubHub mobile homepage preview" width="240" />
+  <img src="docs/preview-mobile.jpg" alt="WubHub mobile homepage preview" width="210" />
   <img src="docs/preview-mobile-twitch.png" alt="WubHub mobile Twitch stream preview" width="240" />
   <img src="docs/preview-mobile-links.png" alt="WubHub mobile links drawer preview" width="240" />
 </p>
