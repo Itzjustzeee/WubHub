@@ -10,6 +10,7 @@ export const links: Record<LinkKey, string> = {
   shop: 'https://pmw.store/',
   subreddit: 'https://www.reddit.com/r/PaymoneyWubby/',
   discord: 'https://discord.com/invite/wubby',
+  contact: 'https://discord.com/users/382071724159795200',
   x: 'https://x.com/PaymoneyWubby?lang=en',
   copSlop: 'https://cop-slop.wubby.live/',
   regardedArt: 'https://regarded.art/',

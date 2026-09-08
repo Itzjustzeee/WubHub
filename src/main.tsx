@@ -49,6 +49,7 @@ import {
   getTwitchParent,
   testLiveDetails,
 } from './config/streams';
+import { appVersion } from './config/version';
 import type {
   KickPlaybackStatus,
   LatestYoutubeVideo,
@@ -664,6 +665,29 @@ function App() {
     closeLinksDrawer();
   }
 
+  function openAbout() {
+    const shouldTransition = viewRef.current !== 'about';
+    setView('about');
+    if (shouldTransition) {
+      runViewTransition('page-swipe-to-stream');
+    }
+    closeMobileMenu();
+    closeLinksDrawer();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleMoreAction(actionId: 'settings' | 'about' | 'contact') {
+    if (actionId === 'about') {
+      openAbout();
+      return;
+    }
+
+    if (actionId === 'contact') {
+      closeMobileMenu();
+      openExternalLink(links.contact);
+    }
+  }
+
   function runViewTransition(className: string) {
     if (viewTransitionTimerRef.current) {
       window.clearTimeout(viewTransitionTimerRef.current);
@@ -764,18 +788,16 @@ function App() {
   }
 
   async function openChatSignIn() {
-    const url = activePlayer.id === 'kick' ? links.kickChatSignIn : links.twitchChatSignIn;
-
     if (isNativeApp) {
       try {
-        await NativeChatAuth.open({ url });
+        await NativeChatAuth.open({ url: links.kickChatSignIn });
         return;
       } catch {
         // Fall back to window.open if the native chat auth view is unavailable.
       }
     }
 
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(links.kickChatSignIn, '_blank', 'noopener,noreferrer');
   }
 
   async function openExternalLink(url: string) {
@@ -1197,7 +1219,12 @@ function App() {
           {mobileMoreActions.map((action) => {
             const Icon = action.icon;
             return (
-              <button type="button" key={action.id}>
+              <button
+                className={view === action.id ? 'active' : ''}
+                type="button"
+                onClick={() => handleMoreAction(action.id)}
+                key={action.id}
+              >
                 <span>
                   <Icon size={25} aria-hidden="true" />
                 </span>
@@ -1357,7 +1384,12 @@ function App() {
                 {mobileMoreActions.map((action) => {
                   const Icon = action.icon;
                   return (
-                    <button type="button" key={action.id}>
+                    <button
+                      className={view === action.id ? 'active' : ''}
+                      type="button"
+                      onClick={() => handleMoreAction(action.id)}
+                      key={action.id}
+                    >
                       <span>
                         <Icon size={28} aria-hidden="true" />
                       </span>
@@ -1566,8 +1598,11 @@ function App() {
               </div>
 
               <div className="stream-chat-column">
-                <section className={`stream-chat-panel ${activePlayer.className} has-toolbar`} aria-label={`${activePlayer.name} chat`}>
-                  {(activePlayer.id === 'kick' || activePlayer.id === 'twitch') && (
+                <section
+                  className={`stream-chat-panel ${activePlayer.className} ${activePlayer.id === 'kick' ? 'has-toolbar' : ''}`}
+                  aria-label={`${activePlayer.name} chat`}
+                >
+                  {activePlayer.id === 'kick' && (
                     <div className="stream-chat-toolbar">
                       <span>{activePlayer.name} chat</span>
                       <button type="button" onClick={openChatSignIn}>
@@ -1630,6 +1665,38 @@ function App() {
                 </button>
               </div>
             )}
+          </section>
+        ) : view === 'about' ? (
+          <section className="about-page" aria-labelledby="about-title">
+            <div className="about-panel">
+              <span className="about-kicker">About WubHub</span>
+              <h1 id="about-title">WubHub</h1>
+              <dl className="about-meta">
+                <div>
+                  <dt>Version</dt>
+                  <dd>{appVersion}</dd>
+                </div>
+                <div>
+                  <dt>Creator</dt>
+                  <dd>Itzjustzee</dd>
+                </div>
+              </dl>
+              <div className="about-copy">
+                <p>
+                  WubHub is a fan-made community app built for quick access to streams, VODs,
+                  community links, and related Wubby content.
+                </p>
+                <p>
+                  This app is unofficial and is not affiliated with, endorsed by, sponsored by, or
+                  formally connected to PaymoneyWubby, Kick, Twitch, YouTube, Patreon, Reddit, X, or
+                  any other linked platform.
+                </p>
+                <p>
+                  Platform embeds, chat login behavior, autoplay, notifications, and playback quality
+                  can change based on each provider's policies and device WebView support.
+                </p>
+              </div>
+            </div>
           </section>
         ) : (
           <section className="vod-page" aria-labelledby="vod-title">

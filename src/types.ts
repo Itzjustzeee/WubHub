@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 
 export type StreamId = 'kick' | 'twitch';
-export type ViewName = 'home' | 'stream' | 'vods';
+export type ViewName = 'home' | 'stream' | 'vods' | 'about';
 export type StreamFullscreenMode = 'none' | 'native' | 'overlay';
 export type NotificationTab = 'notifications' | 'settings';
 export type LiveStatusMap = Record<StreamId, boolean>;
@@ -16,6 +16,7 @@ export type LinkKey =
   | 'shop'
   | 'subreddit'
   | 'discord'
+  | 'contact'
   | 'x'
   | 'copSlop'
   | 'regardedArt'

@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { LatestYoutubeVideo, YoutubeChannel } from '../types';
-import { parseLatestYoutubeVideo } from './youtube';
+import { parseLatestYoutubeVideo, parseLatestYoutubeVideosPage } from './youtube';
 
 const channel: YoutubeChannel = {
   name: 'Wubby Highlights',
@@ -59,5 +59,57 @@ describe('YouTube adapter helpers', () => {
   it('falls back when the feed is empty or malformed', () => {
     expect(parseLatestYoutubeVideo('<feed />', channel, fallback)).toBe(fallback);
     expect(parseLatestYoutubeVideo('not xml', channel, fallback)).toBe(fallback);
+  });
+
+  it('parses the latest regular video from the channel videos page', () => {
+    const parsed = parseLatestYoutubeVideosPage(
+      `
+        <script>
+          var ytInitialData = {
+            "contents": {
+              "richGridRenderer": {
+                "contents": [
+                  {
+                    "richItemRenderer": {
+                      "content": {
+                        "lockupViewModel": {
+                          "contentId": "video2",
+                          "metadata": {
+                            "lockupMetadataViewModel": {
+                              "title": { "content": "Latest regular upload" }
+                            }
+                          },
+                          "contentImage": {
+                            "thumbnailViewModel": {
+                              "image": {
+                                "sources": [
+                                  { "url": "https://i.ytimg.com/vi/video2/hqdefault.jpg", "width": 480 },
+                                  { "url": "https://i.ytimg.com/vi/video2/hq720.jpg", "width": 720 }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          };
+        </script>
+      `,
+      channel,
+      fallback,
+    );
+
+    expect(parsed).toEqual({
+      channelName: 'Wubby Highlights',
+      title: 'Latest regular upload',
+      url: 'https://www.youtube.com/watch?v=video2',
+      image: 'https://i.ytimg.com/vi/video2/hq720.jpg',
+      channelImage: channel.image,
+      className: channel.className,
+    });
   });
 });

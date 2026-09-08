@@ -847,10 +847,11 @@ button {
 .sidebar-more-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 12px;
   margin-top: auto;
   padding-top: 18px;
   border-top: 1px solid rgba(120, 255, 47, 0.12);
+  overflow: visible;
 }
 
 .sidebar-more-actions button {
@@ -864,6 +865,10 @@ button {
   color: rgba(255, 255, 255, 0.78);
   text-align: center;
   cursor: pointer;
+  transform-origin: center bottom;
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
 }
 
 .sidebar-more-actions button > span {
@@ -879,6 +884,10 @@ button {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 12px 28px rgba(0, 0, 0, 0.34);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .sidebar-more-actions svg {
@@ -895,17 +904,32 @@ button {
 }
 
 .sidebar-more-actions button:hover strong,
-.sidebar-more-actions button:focus-visible strong {
+.sidebar-more-actions button:focus-visible strong,
+.sidebar-more-actions button.active strong {
   color: #ffffff;
 }
 
-.sidebar-more-actions button:focus-visible {
+.sidebar-more-actions button:hover,
+.sidebar-more-actions button:focus-visible,
+.sidebar-more-actions button.active {
+  transform: scale(1.5);
+  z-index: 4;
+}
+
+.sidebar-more-actions button:focus-visible,
+.sidebar-more-actions button.active {
   outline: none;
 }
 
-.sidebar-more-actions button:focus-visible > span {
+.sidebar-more-actions button:focus-visible > span,
+.sidebar-more-actions button.active > span {
   outline: 2px solid #72ff33;
   outline-offset: 3px;
+  border-color: rgba(120, 255, 47, 0.9);
+  box-shadow:
+    0 0 0 5px rgba(120, 255, 47, 0.2),
+    0 0 32px rgba(120, 255, 47, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .hero-slide-eyebrow svg {
@@ -1443,6 +1467,91 @@ h1 {
   align-content: start;
   gap: 18px;
   padding: 0 0 22px;
+}
+
+.about-page {
+  display: grid;
+  min-height: calc(100vh - 96px);
+  align-content: start;
+  padding: 4px 0 24px;
+}
+
+.about-panel {
+  display: grid;
+  gap: 22px;
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+  border: 1px solid rgba(120, 255, 47, 0.18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(142, 62, 255, 0.2), transparent 18rem),
+    radial-gradient(circle at 8% 94%, rgba(120, 255, 47, 0.16), transparent 16rem),
+    rgba(9, 13, 18, 0.88);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.about-kicker {
+  color: #72ff33;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.about-panel h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(3rem, 7vw, 5.4rem);
+  font-weight: 950;
+  line-height: 0.9;
+}
+
+.about-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.about-meta div {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.about-meta dt {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.about-meta dd {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.about-copy {
+  display: grid;
+  gap: 14px;
+  max-width: 74ch;
+}
+
+.about-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.58;
 }
 
 .stream-page-header {
@@ -2521,17 +2630,43 @@ h1 {
   }
 
   .mobile-more-actions button:hover strong,
-  .mobile-more-actions button:focus-visible strong {
+  .mobile-more-actions button:focus-visible strong,
+  .mobile-more-actions button.active strong {
     color: #ffffff;
   }
 
-  .mobile-more-actions button:focus-visible {
+  .mobile-more-actions button:focus-visible,
+  .mobile-more-actions button.active {
     outline: none;
   }
 
-  .mobile-more-actions button:focus-visible > span {
+  .mobile-more-actions button:focus-visible > span,
+  .mobile-more-actions button.active > span {
     outline: 2px solid #72ff33;
     outline-offset: 3px;
+  }
+
+  .about-page {
+    min-height: calc(100vh - 138px);
+    padding: 4px 0 100px;
+  }
+
+  .about-panel {
+    gap: 18px;
+    padding: 22px 18px;
+  }
+
+  .about-panel h1 {
+    font-size: 3.2rem;
+  }
+
+  .about-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .about-copy p {
+    font-size: 0.92rem;
+    line-height: 1.5;
   }
 
   .notification-layer {
@@ -3489,7 +3624,7 @@ html.android-tv .nav-item svg {
 }
 
 html.android-tv .sidebar-more-actions {
-  gap: 6px;
+  gap: 16px;
   padding-top: 16px;
 }
 
@@ -3502,6 +3637,28 @@ html.android-tv .sidebar-more-actions button > span {
 html.android-tv .sidebar-more-actions strong {
   max-width: 58px;
   font-size: 0.6rem;
+}
+
+html.android-tv .sidebar-more-actions button:hover,
+html.android-tv .sidebar-more-actions button:focus-visible,
+html.android-tv .sidebar-more-actions button.active {
+  transform: scale(1.5);
+}
+
+html.android-tv .sidebar-more-actions button:focus-visible > span,
+html.android-tv .sidebar-more-actions button.active > span {
+  outline: 3px solid #ffffff;
+  outline-offset: 4px;
+  border-color: #72ff33;
+  box-shadow:
+    0 0 0 8px rgba(120, 255, 47, 0.28),
+    0 0 42px rgba(120, 255, 47, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+html.android-tv .sidebar-more-actions button:focus-visible svg,
+html.android-tv .sidebar-more-actions button.active svg {
+  color: #ffffff;
 }
 
 html.android-tv .nav-live {

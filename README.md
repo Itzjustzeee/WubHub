@@ -6,6 +6,13 @@
 
 WubHub is a community stream hub for PaymoneyWubby viewers, built with React, Vite, and Capacitor for web, Android mobile, Android TV, and iOS targets.
 
+## Preview
+
+<p align="center">
+  <strong>Mobile</strong><br />
+  <img src="docs/preview-mobile.jpg" alt="WubHub mobile homepage preview" width="300" />
+</p>
+
 ## What It Does
 
 - Watch Kick and Twitch streams from one app.
