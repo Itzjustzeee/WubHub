@@ -1294,6 +1294,35 @@ h1 {
   outline-offset: 3px;
 }
 
+.support-card:focus-visible {
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(120, 255, 47, 0.28), transparent 4.8rem),
+    rgba(120, 255, 47, 0.16);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 7px rgba(120, 255, 47, 0.72),
+    0 0 42px rgba(120, 255, 47, 0.48),
+    0 22px 52px rgba(0, 0, 0, 0.52);
+  transform: scale(1.08);
+}
+
+.support-card:focus-visible::before {
+  border-color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 5px rgba(120, 255, 47, 0.78),
+    0 0 44px rgba(120, 255, 47, 0.64);
+}
+
+.support-card:focus-visible strong {
+  color: #ffffff;
+  font-weight: 920;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.72),
+    0 0 18px rgba(120, 255, 47, 0.72);
+}
+
 .stream-meta {
   display: grid;
   align-items: center;
@@ -2124,6 +2153,10 @@ h1 {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 10px 24px rgba(0, 0, 0, 0.32);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 180ms cubic-bezier(0.18, 0.9, 0.26, 1);
 }
 
 .support-card > svg,
@@ -2135,6 +2168,9 @@ h1 {
   align-self: center;
   justify-self: center;
   margin-top: 0;
+  transition:
+    filter 160ms ease,
+    transform 180ms cubic-bezier(0.18, 0.9, 0.26, 1);
 }
 
 .support-card > svg {
@@ -2177,6 +2213,23 @@ h1 {
   box-shadow: none;
 }
 
+.support-card:hover::before,
+.support-card:focus-visible::before {
+  transform: scale(1.22);
+}
+
+.support-card:hover > svg,
+.support-card:hover .support-card-icon,
+.support-card:focus-visible > svg,
+.support-card:focus-visible .support-card-icon {
+  transform: scale(1.28);
+}
+
+.support-card:hover strong,
+.support-card:focus-visible strong {
+  transform: translateY(7px);
+}
+
 .support-card strong,
 .youtube-card strong {
   display: block;
@@ -2194,6 +2247,11 @@ h1 {
   font-weight: 760;
   line-height: 1.08;
   text-transform: none;
+  transition:
+    color 160ms ease,
+    font-size 160ms ease,
+    text-shadow 160ms ease,
+    transform 180ms cubic-bezier(0.18, 0.9, 0.26, 1);
 }
 
 .youtube-card {
@@ -3524,6 +3582,65 @@ html.android-tv .nav-item:focus-visible {
 html.android-tv .nav-item:focus-visible svg {
   color: #ffffff;
   filter: drop-shadow(0 0 8px rgba(125, 255, 63, 0.78));
+}
+
+html.android-tv .support-card:focus-visible {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(125, 255, 63, 0.34), transparent 5.4rem),
+    rgba(125, 255, 63, 0.18);
+  border-radius: 15px;
+  box-shadow:
+    0 0 0 4px #ffffff,
+    0 0 0 11px rgba(125, 255, 63, 0.96),
+    0 0 54px rgba(125, 255, 63, 0.82),
+    0 24px 70px rgba(0, 0, 0, 0.58);
+  transform: scale(1.18);
+}
+
+html.android-tv .support-card:focus-visible::before {
+  border-color: #ffffff;
+  transform: scale(1.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 6px rgba(125, 255, 63, 0.94),
+    0 0 50px rgba(125, 255, 63, 0.88);
+}
+
+html.android-tv .support-card:focus-visible > svg,
+html.android-tv .support-card:focus-visible .support-card-icon {
+  transform: scale(1.48);
+  filter:
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 0 22px rgba(125, 255, 63, 0.82));
+}
+
+html.android-tv .support-card.shop:focus-visible .support-card-icon {
+  transform: scale(1.42);
+  filter:
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 0 24px rgba(255, 213, 91, 0.76))
+    brightness(1.26)
+    contrast(1.2);
+}
+
+html.android-tv .support-card.x-social:focus-visible .support-card-icon {
+  transform: scale(1.48);
+  filter:
+    drop-shadow(1px 0 0 #ffffff)
+    drop-shadow(-1px 0 0 #ffffff)
+    drop-shadow(0 1px 0 #ffffff)
+    drop-shadow(0 -1px 0 #ffffff)
+    drop-shadow(0 0 22px rgba(125, 255, 63, 0.82));
+}
+
+html.android-tv .support-card:focus-visible strong {
+  color: #ffffff;
+  font-size: 1.04rem;
+  font-weight: 920;
+  transform: translateY(10px);
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.78),
+    0 0 22px rgba(125, 255, 63, 0.82);
 }
 
 html.android-tv .hero-carousel-dots button:focus-visible::before {
